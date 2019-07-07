@@ -25,7 +25,7 @@ if [ -d $STOREDIR/$STORENAME ]; then
 fi
 
 mkdir -p $STOREDIR
-time make -j3 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) 2>&1 > $STORENAME.log &&
-    make -f dist.mak PTR64=0 &&
+time make -j3 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >$STORENAME.log 2>&1 &&
+    make -f dist.mak PTR64=0 >>$STORENAME.log 2>&1 &&
     mv build/release/x32/Release/mame $STOREDIR/$STORENAME &&
     mv $STORENAME.log $STOREDIR/$STORENAME/
