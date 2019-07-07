@@ -24,7 +24,6 @@ if [ -d $STOREDIR/$STORENAME ]; then
     exit 1
 fi
 
-# TODO
 mkdir -p $STOREDIR
 time make -j3 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) 2>&1 > $STORENAME.log &&
     make -f dist.mak PTR64=0 &&

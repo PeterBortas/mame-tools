@@ -17,5 +17,6 @@ for tag in $(git tag | grep -v u | sort -r); do
     disk_sentinel
     echo "Checking out and building tag $tag"
     git checkout $tag
+    make clean
     ../mame-tools/pie-build_and_store.sh
 done
