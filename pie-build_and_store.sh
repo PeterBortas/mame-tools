@@ -19,7 +19,7 @@ GITNAME=$(git describe --dirty)
 STORENAME=pie-$GITNAME-$CCNAME-$HASH
 STOREDIR=../stored-mames
 
-if [ -d $STOREDIR/$STORENAME ]; then
+if [ -e $STOREDIR/$STORENAME ]; then
     echo "FATAL: $STOREDIR/$STORENAME already exists!"
     exit 1
 fi
