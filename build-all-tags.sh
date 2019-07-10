@@ -3,7 +3,6 @@
 # NOTE: This script will permanently murder local changes in the mame
 #       checkout it's run
 
-set -x
 shopt -s nullglob  # Do not return the glob itself if no files matches
 
 if [ ! -f dist.mak ]; then
@@ -28,7 +27,9 @@ function cleanup_failed_builds {
 
 for tag in $(git tag | grep -v u | sort -r); do
     disk_sentinel
+    echo -en "\033[0;32m"
     echo "Checking out and building tag $tag"
+    echo -en "\033[0m"
     git checkout $tag || exit 1
     git clean -dfqx # this will murder local changes
     make clean # not needed with the above, but...
