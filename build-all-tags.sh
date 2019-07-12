@@ -5,7 +5,11 @@
 
 shopt -s nullglob  # Do not return the glob itself if no files matches
 
-if [ ! -f dist.mak ]; then
+ZTOOLDIR=$(dirname $0)
+
+# before mame0189 there is no dist.mak
+# use src/mame/machine/amiga.c{pp} as an indicator
+if [ ! -f src/mame/machine/amiga.cpp -a ! -f src/mame/machine/amiga.c ]; then
     echo "FATAL: Needs to be run from mame base dir!"
     exit 1
 fi
@@ -25,7 +29,24 @@ function cleanup_failed_builds {
     done
 }
 
-for tag in $(git tag | grep -v u | sort -r); do
+# drop and diffs caused by applying patches
+function cleanup_patches {
+    if git diff-index --quiet HEAD --; then
+	echo "NOTE: No git state to clean up"
+    else
+	echo "NOTE: Removing applied patches"
+	git stash
+	git stash drop
+    fi
+}
+
+if [ -z "$1" ]; then
+    tags="$(git tag | grep -v u | sort -r)"
+else
+    tags="$1"
+fi
+
+for tag in $tags; do
     disk_sentinel
     echo -en "\033[0;32m"
     echo "Checking out and building tag $tag"
@@ -33,6 +54,11 @@ for tag in $(git tag | grep -v u | sort -r); do
     git checkout $tag || exit 1
     git clean -dfqx # this will murder local changes
     make clean # not needed with the above, but...
-    ../mame-tools/pie-build_and_store.sh
+    if [ ! -f dist.mak ]; then
+	echo "WARNING: No dist.mak, using one based on mame0211"
+	cp -v "$ZTOOLDIR/dist.mak" .
+    fi
+    "$ZTOOLDIR/pie-build_and_store.sh"
     cleanup_failed_builds
+    cleanup_patches
 done
