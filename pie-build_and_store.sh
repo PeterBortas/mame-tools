@@ -58,7 +58,7 @@ function fake_missing_files {
 
 mkdir -p $STOREDIR
 time make -k -j4 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >$STORENAME.log 2>&1 ||
-    make -j1 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >$STORENAME.log 2>&1 ||
+    time make -j1 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >$STORENAME.log 2>&1 ||
     fake_missing_files &&
     make -f dist.mak PTR64=0 >>$STORENAME.log 2>&1 &&
     mv build/release/x32/Release/mame $STOREDIR/$STORENAME &&
