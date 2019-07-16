@@ -40,7 +40,7 @@ EOF
 
 # Make sure we have booted the Pie in the 640x480 benchmark resolution
 # TODO: Why does this make so much differance? Scaling should be free.
-# FIXME: Pie4 does not seem to support exraccting the enumerated HDMI ports by name, so grep
+# NOTE: Pie4 does not seem to support extracting the enumerated HDMI ports by name, so grep
 if [ "$(sudo vcgencmd get_config int | grep hdmi_group)" != "hdmi_group:0=2" ]; then
     echo "FATAL: hdmi_group != 2"
     exit 1
@@ -59,16 +59,17 @@ xscreensaver-command -exit
 
 cat games.lst | while read game; do
     echo -e "${BR}Starting: $game ${NC} at $(date)"
-    # FIXME: Befor the below message can be removed an actual
+    # FIXME: Before the below message can be removed and actual
     # benchmarks can be done the following must be automatically
     # checked:
     # [ ] all swap should be turned off (including zram)  FATAL
     # [ ] load should be below 1                          FATAL
     # [X] Verify screen resolution                        FATAL
-    # [ ] Temperature should be 65? or lower              busywait
+    # [ ] Temperature should be 65(?) or lower            busywait
     # [ ] Temperature should be meassured at least before and after
     # [ ] throttling indicator should be monitored (later make something that reboots to clear the flag)
-    # [ ] Make sure the screensaver is disabled
+    # [X] Make sure the screensaver is disabled
+    # [ ] Make sure SDL is using hardware accel for scaling
     echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
     $MAME -listfull           -rompath $ROMPATH $game >> $LOGFILE
     $MAME -str 90 -nothrottle -rompath $ROMPATH $game >> $LOGFILE
