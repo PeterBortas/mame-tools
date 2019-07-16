@@ -29,7 +29,7 @@ function cleanup_failed_builds {
     done
 }
 
-# drop and diffs caused by applying patches
+# drop any diffs caused by applying patches
 function cleanup_patches {
     if git diff-index --quiet HEAD --; then
 	echo "NOTE: No git state to clean up"
