@@ -54,6 +54,8 @@ fi
 xset s noblank
 xset s off
 xset -dpms
+# But this is probably the only thing useful on a "modern" desktop:
+xscreensaver-command -exit
 
 cat games.lst | while read game; do
     echo -e "${BR}Starting: $game ${NC} at $(date)"
@@ -73,4 +75,5 @@ cat games.lst | while read game; do
     $MAME -bench 90           -rompath $ROMPATH $game >> $LOGFILE
 done
 
-# pi@raspberrypi:~/mame-tools/bench $ /mametest/stored-mames/pie-mame0211-gcc8-1b969a8acb/mame -rompath /mametest/roms -str 90 -nothrottle 1943
+# Uncomment if screensaver should be reactivated
+#xscreensaver-command -restart
