@@ -9,10 +9,18 @@ NC='\033[0m' # No Color
 TAG=0211
 MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-gcc8-*/mame)
 ROMPATH=/mametest/roms
-LOGFILE=logs/$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S').log
+RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
+LOGFILE=logs/$RUNID.log
+STATEDIR=runstate/$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
 mkdir -p logs
+mkdir -p $STATEDIR/$RUNID
 
 export DISPLAY=:0
+
+# SDL defaults to OpenGL renderer if it exists, but it's not
+# accellerated on the Pie, force EGL. (Not tested, requires mame to
+# use the render-target code)
+export SDL_RENDER_DRIVER=opengles2
 
 # Hardcode mame.ini
 cat > ~/.mame/mame.ini <<EOF
@@ -106,17 +114,22 @@ echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 # TODO: Nice things to have
 # [ ] Something that reboots to clear throttle flag
 # [ ] Log any sdram and GPU overclock
+# [ ] Detect if the DISPLAY is forwarded. grep localhost: on $DISPLAY is probably enough
+# [ ] -str saves the final frame in the snap dir. Do something with it
+# [/] Clean up nvram state between runs (or make separate dirs per run
 
 echo "Overclock status: $(vcgencmd get_config arm_freq)" >> $LOGFILE
 
+GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff $game"
+
 cat games.lst | while read game; do
     echo -e "${BR}Starting: $game ${NC} at $(date)"
-    $MAME -listfull           -rompath $ROMPATH $game >> $LOGFILE
+    $MAME -listfull           $GAMEARGS >> $LOGFILE
     wait_for_cooldown
     echo "Before run: $(vcgencmd measure_temp) $(vcgencmd get_throttled)" >> $LOGFILE
-    $MAME -str 90 -nothrottle -rompath $ROMPATH $game >> $LOGFILE
+    $MAME -str 90 -nothrottle $GAMEARGS >> $LOGFILE
     wait_for_cooldown
-    $MAME -bench 90           -rompath $ROMPATH $game >> $LOGFILE
+    $MAME -bench 90           $GAMEARGS >> $LOGFILE
     echo "After run: $(vcgencmd measure_temp) $(vcgencmd get_throttled)" >> $LOGFILE
 done
 
