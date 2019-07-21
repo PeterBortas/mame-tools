@@ -1,6 +1,4 @@
-cfg
 logs
-nvram
-snap
+runstate
 games.lst
 sdl2test-*
