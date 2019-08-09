@@ -56,7 +56,7 @@ for tag in $tags; do
     make clean # not needed with the above, but...
     if [ ! -f dist.mak ]; then
 	echo "WARNING: No dist.mak, using one based on mame0211"
-	cp -v "$ZTOOLDIR/dist.mak" .
+	cp -v "$ZTOOLDIR/missing/dist.mak" .
     fi
     "$ZTOOLDIR/pie-build_and_store.sh"
     cleanup_failed_builds
