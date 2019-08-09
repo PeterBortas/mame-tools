@@ -61,7 +61,7 @@ function fake_missing_files {
 mkdir -p $STOREDIR
 echo "Build starting on $(date)" > $STORENAME.log
 time make -k -j4 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >>$STORENAME.log 2>&1 ||
-    time make -j1 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >>$STORENAME.log 2>&1 &&
+    time make -j1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >>$STORENAME.log 2>&1 &&
     fake_missing_files &&
     make -f dist.mak PTR64=0 >>$STORENAME.log 2>&1 &&
     echo "Build completed on $(date)" >>$STORENAME.log &&
