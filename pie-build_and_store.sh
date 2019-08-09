@@ -55,6 +55,21 @@ function fake_missing_files {
 	mkdir roms
 	touch roms/dir.txt
     fi
+    if [ ! -f uismall.bdf ]; then
+	echo "WARNING: No uismall.bdf, using one based on mame0211"
+	cp -v "$ZTOOLDIR/missing/uismall.bdf" .
+    fi
+    if [ -d language ]; then
+	mkdir -p language
+    fi
+    if [ ! -f language/LICENSE ]; then
+	echo "WARNING: No language/LICENSE, faking one"
+	echo "Unknown, make no assumtions about how you can use or distribute these files" > language/LICENSE
+    fi
+    if [ ! -f language/README.md ]; then
+	echo "WARNING: No language/README.md, faking one"
+	echo "dummy file" > language/README.md
+    fi
     return 0
 }
 
