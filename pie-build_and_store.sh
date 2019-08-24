@@ -26,7 +26,8 @@ CXX=g++-$GCCVER
 
 CCNAME=$(echo $CC | sed 's/\-//')
 HASH=$(git rev-parse --short HEAD)
-GITNAME=$(git describe --dirty)
+# GITNAME=$(git describe --dirty)
+GITNAME=$(git describe --tags)
 
 STORENAME=pie-$GITNAME-$CCNAME-$HASH
 STOREDIR=../stored-mames
@@ -59,7 +60,7 @@ function fake_missing_files {
 	echo "WARNING: No uismall.bdf, using one based on mame0211"
 	cp -v "$ZTOOLDIR/missing/uismall.bdf" .
     fi
-    if [ -d language ]; then
+    if [ ! -d language ]; then
 	mkdir -p language
     fi
     if [ ! -f language/LICENSE ]; then
@@ -73,6 +74,11 @@ function fake_missing_files {
     return 0
 }
 
+if [ -d ../failed-builds/$STORENAME ]; then
+    echo "WARNING: a failed build of $STORENAME already exists. Delete it if you want to rebuild."
+    exit 0
+fi
+
 mkdir -p $STOREDIR
 echo "Build starting on $(date)" > $STORENAME.log
 time make -k -j4 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >>$STORENAME.log 2>&1 ||
@@ -82,4 +88,4 @@ time make -k -j4 REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $
     echo "Build completed on $(date)" >>$STORENAME.log &&
     mv build/release/x32/Release/mame $STOREDIR/$STORENAME &&
     mv $STORENAME.log $STOREDIR/$STORENAME/ ||
-	(cd .. && cp -a mame failed-builds/$STORENAME) # store buildtree for later analysis
+	cp -a $(readlink -f ../mame) ../failed-builds/$STORENAME
