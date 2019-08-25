@@ -6,6 +6,13 @@
 BR='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Fail early if any throttling flags have been triggered
+if [ $(vcgencmd get_throttled) != "throttled=0x0" ]; then
+    echo "FATAL: Pi has been throttled, please restart it to reset flags"
+    exit 1
+fi
+
+
 VER=0.212
 TAG=$(echo $VER | sed 's/\.//')
 MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-gcc8-*/mame)
@@ -119,7 +126,7 @@ function wait_for_cooldown {
 # checked:
 # [/] Make sure SDL is using hardware accel for scaling (SDL_RENDER_DRIVER _should_ do that)
 
-echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
+# echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 
 # TODO: Nice things to have
 # [ ] Something that reboots to clear throttle flag
