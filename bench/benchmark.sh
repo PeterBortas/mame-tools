@@ -12,8 +12,13 @@ if [ $(vcgencmd get_throttled) != "throttled=0x0" ]; then
     exit 1
 fi
 
+if [ -z $1 ]; then
+    echo "Usage: $0 <version>"
+    echo "Example: $0 0.212"
+    exit 1
+fi
 
-VER=0.212
+VER=$1
 TAG=$(echo $VER | sed 's/\.//')
 MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-gcc8-*/mame)
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
@@ -23,6 +28,9 @@ mkdir -p logs
 mkdir -p $STATEDIR
 
 ROMPATH=/mametest/roms/internetarchive
+if [ -e /mametest/roms/0.212 ]; then
+    ROMPATH=/mametest/roms/0.212
+fi
 if [ -e /mametest/roms/$VER ]; then
     ROMPATH=/mametest/roms/$VER
 fi
@@ -129,7 +137,7 @@ function wait_for_cooldown {
 # echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 
 # TODO: Nice things to have
-# [ ] Something that reboots to clear throttle flag
+# [ ] Something that reboots and resumes to clear throttle flag
 # [ ] Log any sdram and GPU overclock
 # [ ] Detect if the DISPLAY is forwarded. grep localhost: on $DISPLAY is probably enough
 # [ ] -str saves the final frame in the snap dir. Do something with it
@@ -140,7 +148,7 @@ echo "Overclock status: $(vcgencmd get_config arm_freq)" >> $LOGFILE
 GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff"
 
 # Don't allow benchmarks to run for more than 10min
-TIMEOUT="timeout 600"
+TIMEOUT="timeout --kill-after=20 600"
 
 # Some games need initial setup to not be stuck forever on some setup
 # screen. These are created manually by starting the game with
