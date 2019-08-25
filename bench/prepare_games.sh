@@ -1,8 +1,10 @@
 #!/bin/bash
 
 export MAME_EXEC=/mametest/stored-mames/pie-mame0211-gcc8-1b969a8acb/mame
-export ROMPATH=/mametest/roms
+export ROMPATH=/mametest/roms/internetarchive
 export PATH=~/ia-rcade:$PATH
+
+mkdir -p /mametest/roms/internetarchive
 
 sort gameset-*.lst | uniq > games.lst
 

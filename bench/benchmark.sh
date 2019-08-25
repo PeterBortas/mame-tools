@@ -6,14 +6,19 @@
 BR='\033[0;33m'
 NC='\033[0m' # No Color
 
-TAG=0211
+VER=0.212
+TAG=$(echo $VER | sed 's/\.//')
 MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-gcc8-*/mame)
-ROMPATH=/mametest/roms
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
 LOGFILE=logs/$RUNID.log
-STATEDIR=runstate/$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
+STATEDIR=runstate/$RUNID
 mkdir -p logs
-mkdir -p $STATEDIR/$RUNID
+mkdir -p $STATEDIR
+
+ROMPATH=/mametest/roms/internetarchive
+if [ -e /mametest/roms/$VER ]; then
+    ROMPATH=/mametest/roms/$VER
+fi
 
 export DISPLAY=:0
 
@@ -67,6 +72,13 @@ if [ $(swapon | wc -l) -gt 0 ]; then
     exit 1
 fi
 
+# This might disable the the default X11 screen saver:
+xset s noblank
+xset s off
+xset -dpms
+# But this is probably the only thing useful on a "modern" desktop:
+xscreensaver-command -exit
+
 # Make sure we don't start the test accidentally while something else is running
 init_load=1
 while (( $(echo "$(awk '{print $1}' /proc/loadavg) > 0.5" |bc -l) )); do
@@ -81,33 +93,31 @@ if [ $init_load -eq 0 ]; then
     echo " OK"
 fi
 
+function get_temp {
+    vcgencmd measure_temp | sed 's/temp=\(.*\)\..*/\1/'
+}
+
 # Throttling sets in at 80C, so leave at least a 15C envelope to work in
 function wait_for_cooldown {
     init_cool=1
-    while [ $(vcgencmd measure_temp | sed 's/temp=\(.*\)\..*/\1/') -gt 64 ]; do
+    while [ $(get_temp) -gt 64 ]; do
 	if [ $init_cool -eq 1 ]; then
-	    echo -n "Waiting for CPU to cool down before next run.."
+	    echo "Waiting for CPU to cool down before next run..."
 	    init_cool=0
 	fi
 	sleep 1
-	echo -n "."
+	echo -ne "$(get_temp)C  \r"
     done
+    echo
     if [ $init_cool -eq 0 ]; then
 	echo " OK"
     fi
 }
 
-# This might disable the the default X11 screen saver:
-xset s noblank
-xset s off
-xset -dpms
-# But this is probably the only thing useful on a "modern" desktop:
-xscreensaver-command -exit
-
 # FIXME: Before the below message can be removed and actual
 # benchmarks can be done the following must be automatically
 # checked:
-# [ ] Make sure SDL is using hardware accel for scaling
+# [/] Make sure SDL is using hardware accel for scaling (SDL_RENDER_DRIVER _should_ do that)
 
 echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 
@@ -116,21 +126,37 @@ echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 # [ ] Log any sdram and GPU overclock
 # [ ] Detect if the DISPLAY is forwarded. grep localhost: on $DISPLAY is probably enough
 # [ ] -str saves the final frame in the snap dir. Do something with it
-# [/] Clean up nvram state between runs (or make separate dirs per run
+# [X] Clean up nvram state between runs (or make separate dirs per run (separate dirs)
 
 echo "Overclock status: $(vcgencmd get_config arm_freq)" >> $LOGFILE
 
-GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff $game"
+GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff"
+
+# Don't allow benchmarks to run for more than 10min
+TIMEOUT="timeout 600"
+
+# Some games need initial setup to not be stuck forever on some setup
+# screen. These are created manually by starting the game with
+# make_initial_state.sh
+echo "Installing initial state in test environment..."
+for x in initial_state/*; do
+    echo $x...
+    (cd $x; \
+     tar cf - * | (cd ../../$STATEDIR && tar xvf -)
+    )
+done
 
 cat games.lst | while read game; do
     echo -e "${BR}Starting: $game ${NC} at $(date)"
-    $MAME -listfull           $GAMEARGS >> $LOGFILE
+    $MAME -listfull           $GAMEARGS $game >> $LOGFILE
     wait_for_cooldown
-    echo "Before run: $(vcgencmd measure_temp) $(vcgencmd get_throttled)" >> $LOGFILE
-    $MAME -str 90 -nothrottle $GAMEARGS >> $LOGFILE
+    echo "Before run: $(get_temp) $(vcgencmd get_throttled)" >> $LOGFILE
+    echo "Running real emulation benchmark" >> $LOGFILE
+    $TIMEOUT $MAME -str 90 -nothrottle $GAMEARGS $game >> $LOGFILE
     wait_for_cooldown
-    $MAME -bench 90           $GAMEARGS >> $LOGFILE
-    echo "After run: $(vcgencmd measure_temp) $(vcgencmd get_throttled)" >> $LOGFILE
+    echo "Running built in benchmark" >> $LOGFILE
+    $TIMEOUT $MAME -bench 90           $GAMEARGS $game >> $LOGFILE
+    echo "After run: $(get_temp) $(vcgencmd get_throttled)" >> $LOGFILE
 done
 
 # Uncomment if screensaver should be reactivated

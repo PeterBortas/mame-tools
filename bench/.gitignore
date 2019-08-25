@@ -1,4 +1,5 @@
 logs
 runstate
+initial_state
 games.lst
 sdl2test-*
