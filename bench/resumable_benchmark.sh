@@ -16,7 +16,7 @@ unlock()            { _lock u; }   # drop a lock
 
 # Avoid running multiple instances of script.
 _prepare_locking
-exlock_now || exit 0
+exlock_now || exit 0  # Locking cleanup is handled by a trap
 
 # Install cronjob if missing
 if crontab -l | grep resumable_benchmark >/dev/null 1>&2; then
@@ -71,9 +71,9 @@ MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-$CC-*/mame)
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
 LOGFILE=logs/$RUNID.log
 STATEDIR=runstate/$RUNID
-# Redirect everything to the log file
 mkdir -p logs
 mkdir -p $STATEDIR
+# Redirect everything to the log file
 exec >$LOGFILE 2>&1
 
 ROMPATH=/mametest/roms/internetarchive
@@ -188,10 +188,8 @@ function wait_for_cooldown {
 # echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 
 # TODO: Nice things to have
-# [/] Something that reboots and resumes to clear throttle flag
 # [ ] Log any sdram and GPU overclock
 # [ ] -str saves the final frame in the snap dir. Do something with it
-# [X] Clean up nvram state between runs (or make separate dirs per run (separate dirs)
 
 FREQ=$(vcgencmd get_config arm_freq | awk -F= '{print $2}')
 echo "ARM overclock status: $(vcgencmd get_config arm_freq) kHz" >> $LOGFILE
