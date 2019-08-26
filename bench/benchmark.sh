@@ -56,7 +56,7 @@ use_marquees  0
 #
 # CORE SOUND OPTIONS
 #
-samplerate    22000
+samplerate    22050
 #
 # OSD ACCELERATED VIDEO OPTIONS
 #
@@ -156,9 +156,7 @@ TIMEOUT="timeout --kill-after=20 600"
 echo "Installing initial state in test environment..."
 for x in initial_state/*; do
     echo $x...
-    (cd $x; \
-     tar cf - * | (cd ../../$STATEDIR && tar xvf -)
-    )
+    (cd $x && tar cf - * | (cd ../../$STATEDIR && tar xvf -))
 done
 
 cat games.lst | while read game; do
