@@ -2,9 +2,6 @@
 
 # Benchmarks whatever needs benchmarking continues to do so even if there is a reboot.
 
-BR='\033[0;33m'
-NC='\033[0m' # No Color
-
 LOCKFILE="/run/lock/`basename $0`"
 LOCKFD=17
 
@@ -60,7 +57,7 @@ else
 	echo "FATAL: There is already an automatic benchmark of $(cat runstate/CURRENT_VERSION) in progress!"
 	exit 1
     else
-	VER=$1    
+	VER=$1
 	echo $VER > runstate/CURRENT_VERSION
     fi
 fi
