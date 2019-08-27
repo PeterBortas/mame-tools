@@ -43,7 +43,6 @@ function reboot_if_throttled {
     fi
 }
 
-#TODO: use an external queue for versions
 if [ -z $1 ]; then
     if [ ! -f runstate/CURRENT_VERSION ]; then
 	echo "Usage: $0 <version>"
@@ -75,6 +74,7 @@ mkdir -p logs
 mkdir -p $STATEDIR
 # Redirect everything to the log file
 exec >$LOGFILE 2>&1
+set -x
 
 ROMPATH=/mametest/roms/internetarchive
 if [ -e /mametest/roms/0.212 ]; then
@@ -216,7 +216,7 @@ cat games.lst | while read game; do
 	echo "NOTE: Skipping $game, $gamelog already exists"
 	continue
     fi
-    echo "Starting: $game at $(date)"
+    echo "Starting $game at $(date)"
     $MAME -listfull           $GAMEARGS $game >> $gamelog 2>&1
     wait_for_cooldown
     echo "Before run: $(get_temp) $(vcgencmd get_throttled)" >> $gamelog
@@ -226,13 +226,24 @@ cat games.lst | while read game; do
     echo "Running built in benchmark" >> $gamelog
     $TIMEOUT $MAME -bench 90           $GAMEARGS $game >> $gamelog 2>&1
     echo "After run: $(get_temp) $(vcgencmd get_throttled)" >> $gamelog
-    echo "Completed: $game at $(date)"
+    echo "Completed $game at $(date)"
     reboot_if_throttled
 done
 
 echo "Completed run of $VER-$FREQ-$CC at $(date), removing from automatic queue"
-#TODO: pull next version from queue here and restart with that
 rm runstate/CURRENT_VERSION
+
+# Pull a new version from the queue and let cron take care of starting it
+cat runstate/queue | while read x; do
+    case $x in
+    0.[0-9]*)
+	echo "Queueing up $x"
+	echo $x > runstate/CURRENT_VERSION
+	sed -i 's/'$x'//' runstate/queue
+	exit 0
+	;;
+    esac
+done
 
 # Uncomment if screensaver should be reactivated
 #xscreensaver-command -restart
