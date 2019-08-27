@@ -133,7 +133,7 @@ if [ "$(sudo vcgencmd get_config int | grep hdmi_mod)" != "hdmi_mode:0=4" ]; the
 fi
 
 # Avoid variability due to SD card swapping or zram overhead
-if [ $(swapon | wc -l) -gt 0 ]; then
+if [ $(/sbin/swapon | wc -l) -gt 0 ]; then
     echo "FATAL: swap is enabled"
     exit 1
 fi
