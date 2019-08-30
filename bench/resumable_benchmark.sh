@@ -24,7 +24,7 @@ if crontab -l | grep resumable_benchmark >/dev/null 1>&2; then
 else
     echo "Installing cronjob..."
     (crontab -l ; \
-     echo "*/10 * * * * cd $HOME/mame-tools/bench && ./resumable_benchmark.sh") | crontab -
+     echo "*/5 * * * * cd $HOME/mame-tools/bench && ./resumable_benchmark.sh") | crontab -
 fi
 
 function was_throttled {
@@ -211,6 +211,11 @@ done
 mkdir -p runstate/gameresults
 
 cat games.lst | while read game; do
+    case $game in
+    *#*)
+	echo "Note: Skipping $game"
+	continue
+    esac
     gamelog=runstate/gameresults/$game-$VER-$FREQ-$CC.result
     if [ -f $gamelog ]; then
 	echo "NOTE: Skipping $game, $gamelog already exists"
