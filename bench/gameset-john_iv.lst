@@ -1,12 +1,12 @@
 # blitz (Too slow to even contemplate benchmarking)
 crusnusa 	
 cubeqst
-cyvern
+# cyvern (timeout with 15min limit)
 dkong
 drivedge
 gauntleg
-gnbarich
-gradius4
+# gnbarich (timeout with 15min limit)
+# gradius4 (timeout with 15min limit)
 gtfore06
 harddriv
 kidniki
@@ -21,10 +21,10 @@ radikalb
 roadblst
 robotron
 rvschool
-scud
+# scud (timeout with 15min limit)
 sf2
 sfa2
-sfiii
+# sfiii (timeout with 15min limit)
 slrasslt
 starblad
 starsldr
@@ -32,4 +32,4 @@ sushibar
 tekken
 tekken3
 vf2
-vfkids
+# vfkids (timeout with 15min limit)
