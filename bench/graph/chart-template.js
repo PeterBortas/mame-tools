@@ -30,7 +30,7 @@ function drawCharts() {
     var cdata = new google.visualization.DataTable(jsonChart);
 
     var coptions = {
-        title: 'Mame(tm) benchmarks (% of real-time, higher is better) for RPi4, 2G RAM, overclocked to 1.75GHz',
+        title: 'Mame™ benchmarks (% of real-time, higher is better) for RPi4, 2G RAM, overclocked to 1.75GHz',
 	// curveType: 'function',
         legend: { position: 'bottom' }
     };

@@ -74,7 +74,7 @@ mapping parse_result(string filename)
     return res;
 }
 
-string create_table(mapping all_results)
+string create_table(mapping all_results, string type)
 {
     //Table view
     mapping(string:array) tdata = ([
@@ -114,8 +114,8 @@ string create_table(mapping all_results)
 	    //werror("v: %O\n", version);
 	    if(gamedata[game][version]) {
 		game_desc = gamedata[game][version]->game_desc; // Keep the newest one
-		if( !gamedata[game][version]->bench ||
-		    !gamedata[game][version]->bench->percent )
+		if( !gamedata[game][version][type] ||
+		    !gamedata[game][version][type]->percent )
 		{
 		    // There is and entry, but it lacks data due to crash or timeout
 		    //TODO: Using Var.Null breaks encoding
@@ -124,7 +124,7 @@ string create_table(mapping all_results)
 				     ]) ]) });
 		} else {
 		    // Regular good entry
-		    float percent = (float)gamedata[game][version]->bench->percent;
+		    float percent = (float)gamedata[game][version][type]->percent;
 		    if(gamedata[game][version]->throttled_before != "0x0" ||
 		       gamedata[game][version]->throttled_after != "0x0") {
 			vbenches += ({ (["v":percent, "p":(["style": "background-color:orange;" ]) ]) });
@@ -173,7 +173,7 @@ string create_table(mapping all_results)
 }
 
 // TODO: clean up both create_* functions, they contain a lot of cut'n'paste
-string create_chart(mapping all_results)
+string create_chart(mapping all_results, string type)
 {
     // Linechart view
     mapping(string:array) cdata = ([
@@ -205,8 +205,8 @@ string create_chart(mapping all_results)
 	foreach(sort(indices(gamedata)), string game) {
 	    if(gamedata[game][version]) {
 		game_desc = gamedata[game][version]->game_desc; // Keep the newest one
-		if( !gamedata[game][version]->bench ||
-		    !gamedata[game][version]->bench->percent )
+		if( !gamedata[game][version][type] ||
+		    !gamedata[game][version][type]->percent )
 		{
 		    // There is an entry, but it lacks data due to crash or timeout
 		    //TODO: Using Var.Null breaks encoding
@@ -215,7 +215,7 @@ string create_chart(mapping all_results)
 				     ]) ]) });
 		} else {
 		    // Regular good entry
-		    float percent = (float)gamedata[game][version]->bench->percent;
+		    float percent = (float)gamedata[game][version][type]->percent;
 		    if(gamedata[game][version]->throttled_before != "0x0" ||
 		       gamedata[game][version]->throttled_after != "0x0") {
 			vbenches += ({ (["v":percent, "p":(["style": "background-color:orange;" ]) ]) });
@@ -279,14 +279,31 @@ int main(int argc, array argv)
     }
     //    werror("%O\n", all_results);
 
-    string table_data = create_table(all_results);
-    string chart_data = create_chart(all_results);
-    // werror("DEBUG table_data:\n%s\n", table_data);
-    // werror("DEBUG chart_data:\n%s\n", chart_data);
+    foreach( ({"bench", "real"}), string type) {
+	string table_data = create_table(all_results, type);
+	string chart_data = create_chart(all_results, type);
+	// werror("DEBUG table_data:\n%s\n", table_data);
+	// werror("DEBUG chart_data:\n%s\n", chart_data);
 
-    string template = Stdio.read_file("chart-template.js");
-    string out = replace( template,
-			  ({ "¤TABLEDATA¤", "¤CHARTDATA¤" }),
-			  ({ table_data,    chart_data    }) );
-    write(out);
+	string template = Stdio.read_file("chart-template.js");
+	string out = replace( template,
+			      ({ "¤TABLEDATA¤", "¤CHARTDATA¤" }),
+			      ({ table_data,    chart_data    }) );
+	string benchid = "rpi4-1.75-gcc8-"+ type;
+	mkdir("output");
+	Stdio.cp("index.html", "output/index.html");
+	Stdio.write_file("output/"+benchid+".js", out);
+
+	template = Stdio.read_file("html-template.html");
+	if(type == "bench") {
+	    out = replace( template,
+			   ({ "¤MAMEFLAGS¤", "¤BENCHID¤" }),
+			   ({ "-bench 90",   benchid     }) );
+	} else {
+	    out = replace( template,
+			   ({ "¤MAMEFLAGS¤",         "¤BENCHID¤" }),
+			   ({ "-str 90 -nothrottle", benchid     }) );
+	}
+	Stdio.write_file("output/"+benchid+".html", out);	
+    }
 }

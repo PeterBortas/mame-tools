@@ -1,0 +1,65 @@
+<head>
+  <meta charset="utf-8">
+</head>
+
+<body>
+<h1>Mame™ Raspberry Pi 4 benchmarks</h1>
+
+These benchmarks is still in the process of being collected. The
+current batch is run with the default gcc8 flags, no attempt has been
+made to exploit the newer instructions available on RPi4 yet.
+<p>
+The main target of these benchmarks right now is to track performance
+over time in Mame version. I'm not mad enough to run Mame on a
+Raspberry Pi, but understand why others do it and want to keep a
+realistic dataset about how feasible it is.
+<p>
+The idea for these benchmarks comes from ChoccyHobNob who made runs on
+Raspberry Pi 1, 2 and 3 and can be
+found <a href="http://web.archive.org/web/20170924001029/http://choccyhobnob.com:80/mame/benchmarks-for-mame-on-raspberry-pi/">in
+the Wayback Machine</a>. The benchmarks on this page used exactly the
+same configuration where possible so that they are comparable, and all
+the same games have been run. Where possible the games included
+in <a href="http://www.mameui.info/Bench.htm">john_iv's continuously
+updated benchmark</a> run on modern PCs have also been included in
+this benchmark, but a few games are so slow that they are unfeasible
+to run on the current generation of RPi.
+  
+<h2>Benchmarking environment</h2>
+<ul>
+  <li>Raspberry Pi 4 rev 1, 2G RAM variant
+  <li>The CPU is equipped with a heatsink and fan
+  <li>Overclocked from 1.5GHz to 1.75GHz. (2GHz is also doable, but not everyone seems to win the silicon lottery that allows for that)
+  <li>CPU throttling is monitored and noted in the benchmark table (orange). Those will eventually be re-run.
+  <li>/boot/config.txt has this added to the top-level: <pre>
+# Mame Benchmark mode (640x480), force HDMI even with missing monitor /zino
+hdmi_group=2
+hdmi_mode=4
+hdmi_drive=2
+hdmi_force_hotplug=1
+<li>mame.ini halves sound sampling frequency (probably does very little, but matches ChoccyHobNob's runs):<pre>
+#
+# CORE SOUND OPTIONS
+#
+samplerate    22050</pre>
+<li>mame.ini turns off artwork where possible:<pre>
+#
+# CORE ARTWORK OPTIONS
+#
+artwork_crop  0
+use_backdrops 0
+use_overlays  0
+use_bezels    0
+use_cpanels   0
+use_marquees  0</pre>
+
+<li>Exact setup can be found in the <a href="https://github.com/PeterBortas/mame-tools">github repo</a>
+</ul>
+
+<h2>Benchmarks</h2>
+<ul>
+  <li><a href="rpi4-1.75-gcc8-bench.html">Raspberry Pi 4 1.75GHz OC (-bench 90 runs)</a> These runs the builtin benchmark, which does not try to output video or audio
+  <li><a href="rpi4-1.75-gcc8-real.html">Raspberry Pi 4 1.75GHz OC (-str 90 -nothrottle runs)</a> These runs Mame as normal, with video and audio and are closer to what can be expected when playiung the game
+</ul>
+
+</body>
