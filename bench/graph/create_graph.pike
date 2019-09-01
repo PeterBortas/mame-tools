@@ -150,12 +150,10 @@ string create_table(mapping all_results, string type)
 	    note = (["v":""]); break;
 	}
 
-	//FIXME: Driver should be extracted at runtime, but that is
-	//       not currently done
 	tdata->rows += ({
 	    (["c": ({
 		(["v":game]),
-		(["v":"driver NA"]),
+		(["v":get_driver(game)]),
 		@vbenches,
 		(["v":game_desc]),
 		note
@@ -245,6 +243,23 @@ string create_chart(mapping all_results, string type)
     res = replace(res, "\"v\": \"null\"", "\"v\": null"); //FIXME: kludge
     return res;
 }
+
+
+mapping(string:string) drivercache = ([]);
+string get_driver(string game)
+{
+    if(drivercache[game])
+	return drivercache[game];
+    
+    string exe = combine_path( getenv("HOME"), "hack/mame-upstream/mame64" );
+    mapping res = Process.run( ({ exe, "-listsource", game }) );
+    if(res->exitcode)
+	exit(1, "FATAL: Failed to get driver for %s\n", game);
+    sscanf(res->stdout, game+"%*[ ]%s.cpp", string driver);
+    drivercache[game] = driver;
+    return driver;
+}
+
 
 int main(int argc, array argv)
 {
