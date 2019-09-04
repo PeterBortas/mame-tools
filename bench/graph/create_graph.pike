@@ -136,8 +136,6 @@ string create_table(mapping all_results, string type)
 		// There is no entry of this game for this version
 		vbenches += ({ (["v":"null" ]) });
 	    }
-		
-	       
 	}
 
 	mapping note;
@@ -187,7 +185,7 @@ string create_chart(mapping all_results, string type)
 	}
     }
     
-    cdata->cols += ({ (["id":"", "label":"Version", "pattern":"", "type":"string"]) });
+    cdata->cols += ({ (["id":"", "label":"Version", "pattern":"", "type":"number"]) });
     array all_versions = ({}); //Games might not have results for all
 			       //version, so same a complete list
     all_versions = sort(indices(all_results));
