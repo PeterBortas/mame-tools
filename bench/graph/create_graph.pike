@@ -5,6 +5,8 @@
 mapping parse_filename(string filename)
 {
     mapping res = ([]);
+    filename = basename(filename);
+
     //example: kof98-0.175-1750-gcc8.result
     if(sscanf(filename, "%s-0.%d-%d-%s.result",
 	      res->game, res->version, res->freq, res->compiler) == 4) {
@@ -86,7 +88,7 @@ string create_table(mapping all_results, string type)
 		      (["id":"", "label":"Driver", "pattern":"", "type":"string"]),
     });
     array all_versions = ({}); //Games might not have results for all
-			       //version, so same a complete list
+			       //version, so save a complete list
     foreach(sort(indices(all_results)), string version) {
 	all_versions += ({ version });
 	// TODO: Why did I choose number? Maybe change to string
@@ -275,8 +277,9 @@ int main(int argc, array argv)
 	if(game[0..0] == "#")
 	    continue; // Skip comments
 
-	// The result files are not in a good format
-	foreach( glob(game+"*", result_files), string resultfile ) {
+	// The result files are a bit free form because they are just
+	// the output from the mame binary
+	foreach( glob(game+"-*", result_files), string resultfile ) {
 	    string filename = result_base + resultfile;
 	    mapping fileinfo = parse_filename(filename);
 	    // werror("file: %s\n", filename);
@@ -290,7 +293,7 @@ int main(int argc, array argv)
 	    all_results[mameversion][game] = res;
 	}
     }
-    //    werror("%O\n", all_results);
+    // werror("%O\n", all_results);
 
     foreach( ({"bench", "real"}), string type) {
 	string table_data = create_table(all_results, type);
