@@ -48,6 +48,11 @@ if [ -f 3rdparty/bgfx/include/bgfx/bgfxplatform.h ]; then
     fi
 fi
 
+# 0.198-199 will not build on arm, see https://github.com/mamedev/mame/issues/3639
+if [ $GITNAME = mame0198 -o $GITNAME = mame0199 ]; then
+    patch -p1 < $ZTOOLDIR/patches/buildfix-multiple_inst_def_templ.patch
+fi
+
 # dist.mak needs a static set of files, and some of them are missing
 # in older mames. Create empty dummies
 function fake_missing_files {
