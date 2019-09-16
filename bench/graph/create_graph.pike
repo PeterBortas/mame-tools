@@ -30,15 +30,17 @@ mapping parse_result(string filename)
 	switch(lnr) {
 	case 0:
 	    if(sscanf(line, "Name:%*[ ]Description:") != 1) {
-		exit(1, "WARNING: Failed to parse line %d '%s' in \n%s\n",
-		     lnr, line, filename);
+		werror("WARNING: Failed to parse line %d '%s' in \n%s\n",
+		       lnr, line, filename);
+		return res;
 	    }
 	    break;
 	case 1:
 	    int matches = sscanf(line, "%s%*[ ]\"%s\"", res->game, res->game_desc);
 	    if(matches != 3) {
-		exit(1, "WARNING: Failed to parse line %d '%s' in \n%s\n",
-		     lnr, line, filename);
+		werror("WARNING: Failed to parse line %d '%s' in \n%s\n",
+		       lnr, line, filename);
+		return res;
 	    }
 	    break;
 	default:
@@ -70,12 +72,16 @@ mapping parse_result(string filename)
 		if(res[current_test_type]->runtime != 89)
 		    exit(1, "FATAL: test runtime in '%s' is not 89s!", filename);
 	    }
+	    if(line == "Fatal error: Required files are missing, the machine cannot be run.") {
+		res[current_test_type]->failtype = "missing files";
+	    }
 	    break;
 	}
     }    
     return res;
 }
 
+mapping missingroms = ([]); // Redundant, for easy access
 string create_table(mapping all_results, string type)
 {
     //Table view
@@ -120,12 +126,20 @@ string create_table(mapping all_results, string type)
 		    !gamedata[game][version][type]->percent )
 		{
 		    // There is and entry, but it lacks data due to crash or timeout
+		    string style = "color:#006600; background-color:grey;";
+		    if(gamedata[game][version][type] &&
+		       gamedata[game][version][type]->failtype == "missing files") {
+			// Per type fail for this is redundant, but doesn't hurt
+			style = "color:#006600; background-color:red;";
+			if(!missingroms[game])
+			    missingroms[game] = ({});
+			missingroms[game] += ({ version });
+			werror("%s %s is missing files\n", game, version);
+		    }
 		    //TODO: Using Var.Null breaks encoding
-		    vbenches += ({ (["v":"null", "p":([
-					 "style": "color:#006600; background-color:grey;",
-				     ]) ]) });
+		    vbenches += ({ (["v":"null", "p":([ "style": style ]) ]) });
 		} else {
-		    // Regular good entry
+		    // Regular good entry (possibly throttled)
 		    float percent = (float)gamedata[game][version][type]->percent;
 		    if(gamedata[game][version]->throttled_before != "0x0" ||
 		       gamedata[game][version]->throttled_after != "0x0") {
@@ -260,6 +274,39 @@ string get_driver(string game)
     return driver;
 }
 
+// string create_ranges( array(float) versions ) {
+//     versions = sort(versions);
+//     array(array(float)) ranges = ({});
+//     float cur_rangestart = versions[0];
+//     float cur_rangeend;
+//     array(float) cur_range;
+
+//     if(sizeof(versions) == 1)
+// 	return sprintf("%3f", versions);
+	
+//     for(int i=1; i<sizeof(versions); i++) {
+// 	if( i < sizeof(versions)-2 ) {
+// 	    // we can check next
+// 	} else {
+// 	    // Time to close off the last range
+// 	    ranges += ({ ({ cur_rangestart, cur_rangeend }) });
+// 	    continue;
+// 	}
+// 	if( versions[i] - cur_rangestart == 0.1 ) {
+// 	    cur_rangeend = versions[i];
+// 	} else {
+// 	    ranges += ({ ({ cur_rangestart, cur_rangeend }) });
+// 	}
+//     }
+// }
+
+// string missing_roms() {
+//     mapping missingroms = ([]); // Redundant, for easy access
+//     string res = "";
+//     foreach(missingroms; string game; array versions) {
+// 	res += game +" "+ create_ranges( (array(float))versions ) +" is missing files\n";
+//     }
+// }
 
 int main(int argc, array argv)
 {
