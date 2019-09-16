@@ -1,0 +1,147 @@
+diff --git a/src/devices/bus/coco/coco_dcmodem.cpp b/src/devices/bus/coco/coco_dcmodem.cpp
+index d4cba829a0..d155521592 100644
+--- a/src/devices/bus/coco/coco_dcmodem.cpp
++++ b/src/devices/bus/coco/coco_dcmodem.cpp
+@@ -101,8 +101,6 @@ ROM_START(coco_dcmodem)
+ ROM_END
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_DCMODEM, device_cococart_interface, coco_dc_modem_device, "coco_dcmodem", "CoCo Direct Connect Modem PAK")
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+ 
+ 
+ //-------------------------------------------------
+diff --git a/src/devices/bus/coco/coco_gmc.cpp b/src/devices/bus/coco/coco_gmc.cpp
+index 310e037fe1..706bdf3cb1 100644
+--- a/src/devices/bus/coco/coco_gmc.cpp
++++ b/src/devices/bus/coco/coco_gmc.cpp
+@@ -63,8 +63,6 @@ MACHINE_CONFIG_END
+ //**************************************************************************
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_PAK_GMC, device_cococart_interface, coco_pak_gmc_device, "cocopakgmc", "CoCo Games Master Cartridge")
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+ 
+ //-------------------------------------------------
+ //  coco_pak_device - constructor
+diff --git a/src/devices/bus/coco/coco_multi.cpp b/src/devices/bus/coco/coco_multi.cpp
+index 6f42c45d94..e8ae24c7b6 100644
+--- a/src/devices/bus/coco/coco_multi.cpp
++++ b/src/devices/bus/coco/coco_multi.cpp
+@@ -214,8 +214,6 @@ INPUT_PORTS_END
+ //**************************************************************************
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_MULTIPAK, device_cococart_interface, coco_multipak_device, "coco_multipack", "CoCo Multi-Pak Interface")
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+ 
+ 
+ 
+diff --git a/src/devices/bus/coco/coco_orch90.cpp b/src/devices/bus/coco/coco_orch90.cpp
+index f1dcdf3ff2..979acd423a 100644
+--- a/src/devices/bus/coco/coco_orch90.cpp
++++ b/src/devices/bus/coco/coco_orch90.cpp
+@@ -123,5 +123,3 @@ MACHINE_CONFIG_END
+ //**************************************************************************
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_ORCH90, device_cococart_interface, coco_orch90_device, "coco_orch90", "CoCo Orch-90 PAK")
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+diff --git a/src/devices/bus/coco/coco_rs232.cpp b/src/devices/bus/coco/coco_rs232.cpp
+index 914b5f9c0c..774ab1a98f 100644
+--- a/src/devices/bus/coco/coco_rs232.cpp
++++ b/src/devices/bus/coco/coco_rs232.cpp
+@@ -112,5 +112,3 @@ const tiny_rom_entry *coco_rs232_device::device_rom_region() const
+ //**************************************************************************
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_RS232, device_cococart_interface, coco_rs232_device, "coco_rs232", "CoCo Deluxe RS-232 PAK")
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+diff --git a/src/devices/bus/coco/coco_ssc.cpp b/src/devices/bus/coco/coco_ssc.cpp
+index b79e82c78c..eff344b2d3 100644
+--- a/src/devices/bus/coco/coco_ssc.cpp
++++ b/src/devices/bus/coco/coco_ssc.cpp
+@@ -146,8 +146,6 @@ namespace
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_SSC, device_cococart_interface, coco_ssc_device, "coco_ssc", "CoCo S/SC PAK");
+ DEFINE_DEVICE_TYPE(COCOSSC_SAC, cocossc_sac_device, "cocossc_sac", "CoCo SSC Sound Activity Circuit");
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+ 
+ 
+ //**************************************************************************
+diff --git a/src/devices/bus/coco/coco_t4426.cpp b/src/devices/bus/coco/coco_t4426.cpp
+index 896b5ef9f5..988ddd0233 100644
+--- a/src/devices/bus/coco/coco_t4426.cpp
++++ b/src/devices/bus/coco/coco_t4426.cpp
+@@ -225,8 +225,6 @@ INPUT_PORTS_END
+ //**************************************************************************
+ 
+ DEFINE_DEVICE_TYPE_PRIVATE(COCO_T4426, device_cococart_interface, coco_t4426_device, "coco_t4426", "Terco CNC Programming Station 4426 multi cart")
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+ 
+ //**************************************************************************
+ //  LIVE DEVICE
+diff --git a/src/devices/bus/coco/cococart.cpp b/src/devices/bus/coco/cococart.cpp
+index 30ac0b04fd..93d1c42453 100644
+--- a/src/devices/bus/coco/cococart.cpp
++++ b/src/devices/bus/coco/cococart.cpp
+@@ -447,6 +447,9 @@ std::string cococart_slot_device::get_default_card_software(get_default_card_sof
+ //  CoCo cartridge slots
+ //**************************************************************************
+ 
++template class device_finder<device_cococart_interface, false>;
++template class device_finder<device_cococart_interface, true>;
++
+ //-------------------------------------------------
+ //  device_cococart_interface - constructor
+ //-------------------------------------------------
+diff --git a/src/devices/bus/coco/dragon_fdc.cpp b/src/devices/bus/coco/dragon_fdc.cpp
+index cbaf7a321c..9ca1758b88 100644
+--- a/src/devices/bus/coco/dragon_fdc.cpp
++++ b/src/devices/bus/coco/dragon_fdc.cpp
+@@ -86,9 +86,6 @@
+ #define WD2797_TAG              "wd2797"
+ 
+ 
+-template class device_finder<device_cococart_interface, false>;
+-template class device_finder<device_cococart_interface, true>;
+-
+ 
+ /***************************************************************************
+     TYPE DEFINITIONS
+diff --git a/src/devices/bus/ss50/interface.cpp b/src/devices/bus/ss50/interface.cpp
+index 2beb4e8577..b17f54f9c6 100644
+--- a/src/devices/bus/ss50/interface.cpp
++++ b/src/devices/bus/ss50/interface.cpp
+@@ -203,6 +203,9 @@ WRITE_LINE_MEMBER(ss50_interface_port_device::f600_1200_w)
+ //  SS-50 CARD INTERFACE
+ //**************************************************************************
+ 
++template class device_finder<ss50_card_interface, false>;
++template class device_finder<ss50_card_interface, true>;
++
+ //-------------------------------------------------
+ //  ss50_card_interface - construction
+ //-------------------------------------------------
+diff --git a/src/devices/bus/ss50/mpc.cpp b/src/devices/bus/ss50/mpc.cpp
+index 40fbf4a76d..8489e23e29 100644
+--- a/src/devices/bus/ss50/mpc.cpp
++++ b/src/devices/bus/ss50/mpc.cpp
+@@ -191,5 +191,3 @@ WRITE_LINE_MEMBER(ss50_mpc_device::f300_w)
+ 
+ // device type definition
+ DEFINE_DEVICE_TYPE_PRIVATE(SS50_MPC, ss50_card_interface, ss50_mpc_device, "ss50_mpc", "MP-C Serial Control Interface")
+-template class device_finder<ss50_card_interface, false>;
+-template class device_finder<ss50_card_interface, true>;
+diff --git a/src/devices/bus/ss50/mps.cpp b/src/devices/bus/ss50/mps.cpp
+index d15b7288ba..7f6479db32 100644
+--- a/src/devices/bus/ss50/mps.cpp
++++ b/src/devices/bus/ss50/mps.cpp
+@@ -180,5 +180,3 @@ WRITE_LINE_MEMBER(ss50_mps_device::acia_irq_w)
+ 
+ // device type definition
+ DEFINE_DEVICE_TYPE_PRIVATE(SS50_MPS, ss50_card_interface, ss50_mps_device, "ss50_mps", "MP-S Serial Interface")
+-template class device_finder<ss50_card_interface, false>;
+-template class device_finder<ss50_card_interface, true>;
