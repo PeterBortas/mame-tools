@@ -14,11 +14,15 @@ fi
 VER=$1
 GAME=$2
 
+
 TAG=$(echo $VER | sed 's/\.//')
+if [ $(getconf LONG_BIT) -eq 64 ]; then
+    EXE64=64
+fi
 if [ VER = "git" ]; then
     MAME=$HOME/hack/mame-upstream/mame64
 else
-    MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-gcc8-*/mame)
+    MAME=$(ls -d /mametest/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${TAG}-gcc8-*/mame$EXE64)
 fi
 BASE=$(mktemp -d -t mame$TAG-$GAME-XXXXXXXXXX)
 

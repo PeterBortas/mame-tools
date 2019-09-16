@@ -11,8 +11,8 @@ fi
 
 GAME=$1
 
-# So far always done with a 0.212 compiled from git
-MAME=$HOME/hack/mame-upstream/mame64
+# All current state done with a 0.212 compiled from git
+MAME=/mametest/arch/x86_64-64/stored-mames/mame0212-gcc5-1182bd9/mame64
 BASE=/mametest/mame-tools/bench/initial_state/$1
 mkdir -p $BASE
 

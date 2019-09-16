@@ -3,9 +3,13 @@
 # NOTE: This script will permanently murder local changes in the mame
 #       checkout it's run
 
+# Checks out all tagged Mame releases one by one, builds them and
+# stores the resulting dist. Alternatively call with a specific tag to
+# build and store that.
+
 shopt -s nullglob  # Do not return the glob itself if no files matches
 
-ZTOOLDIR=$(dirname $0)
+ZTOOLDIR="$(dirname $0)"
 
 # before mame0189 there is no dist.mak
 # use src/mame/machine/amiga.c{pp} as an indicator
@@ -23,8 +27,8 @@ function disk_sentinel {
 }
 
 function cleanup_failed_builds {
-    for x in pie-mame0*.log; do
-	mkdir ../stored-mames/$(echo $x | sed 's/\.log//') &&
+    for x in mame0*.log; do
+	mkdir -p ../stored-mames/$(echo $x | sed 's/\.log//') &&
 	    mv -iv $x ../stored-mames/$(echo $x | sed 's/\.log//')/;
     done
 }
@@ -41,8 +45,10 @@ function cleanup_patches {
 }
 
 if [ -z "$1" ]; then
-    tags="$(git tag | grep -v u | sort -r)"
+    # List all tags but remove the "u" versions
+    tags="$(git tag | grep -v u | sort -r)" 
 else
+    # Allow specific tag to be build
     tags="$1"
 fi
 
@@ -58,7 +64,7 @@ for tag in $tags; do
 	echo "WARNING: No dist.mak, using one based on mame0211"
 	cp -v "$ZTOOLDIR/missing/dist.mak" .
     fi
-    "$ZTOOLDIR/pie-build_and_store.sh"
+    "$ZTOOLDIR/one-build-and-store.sh"
     cleanup_failed_builds
     cleanup_patches
 done

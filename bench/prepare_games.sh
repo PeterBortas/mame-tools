@@ -1,6 +1,9 @@
 #!/bin/bash
 
-export MAME_EXEC=/mametest/stored-mames/pie-mame0211-gcc8-1b969a8acb/mame
+if [ $(getconf LONG_BIT) -eq 64 ]; then
+    EXE64=64
+fi
+export MAME_EXEC=/mametest/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame0211-gcc8-1b969a8acb/mame$EXE64
 export ROMPATH=/mametest/roms/internetarchive
 export PATH=~/ia-rcade:$PATH
 

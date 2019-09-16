@@ -2,6 +2,8 @@
 
 # Benchmarks whatever needs benchmarking continues to do so even if there is a reboot.
 
+BENCHDIR=$(dirname $0)
+
 LOCKFILE="/run/lock/`basename $0`"
 LOCKFD=17
 
@@ -66,7 +68,10 @@ reboot_if_throttled
 
 TAG=$(echo $VER | sed 's/\.//')
 CC=gcc8
-MAME=$(ls -d /mametest/stored-mames/pie-mame${TAG}-$CC-*/mame)
+if [ $(getconf LONG_BIT) -eq 64 ]; then
+    EXE64=64
+fi
+MAME=$(ls -d /mametest/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${TAG}-$CC-*/mame$EXE64)
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
 LOGFILE=logs/$RUNID.log
 STATEDIR=runstate/$RUNID
@@ -90,6 +95,13 @@ export DISPLAY=:0
 # accellerated on the Pie, force EGL. (Not tested, requires mame to
 # use the render-target code)
 export SDL_RENDER_DRIVER=opengles2
+
+if $BENCHDIR/sdl2test-zino; then
+    : # echo "NOTE: Renderer tested OK"
+else
+    echo "FATAL: Renderer not available"
+    exit 1
+fi
 
 # Hardcode mame.ini, verified to be picked up even if -cfg_directory is used
 # Note: All the artwork options are probably useless in ~0.212+
@@ -197,7 +209,9 @@ echo "ARM overclock status: $(vcgencmd get_config arm_freq) kHz" >> $LOGFILE
 GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff"
 
 # Don't allow benchmarks to run for more than 10 x test time, aka 15min
-TIMEOUT="timeout --kill-after=20 900"
+#TIMEOUT="timeout --kill-after=20 900"
+# Temporarily double time to check some edge cases
+TIMEOUT="timeout --kill-after=20 1800"
 
 # Some games need initial setup to not be stuck forever on some setup
 # screen. These are created manually by starting the game with
