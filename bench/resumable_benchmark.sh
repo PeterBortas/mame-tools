@@ -42,6 +42,7 @@ function reboot_if_throttled {
 	echo "FATAL: Pi has been throttled, will reboot at $(date)" >> runstate/reboot.log
 	./parse_throttle.py >> runstate/reboot.log
 	sudo reboot
+	exit 1 # reboot does not block
     fi
 }
 
@@ -92,7 +93,7 @@ fi
 export DISPLAY=:0
 
 # SDL defaults to OpenGL renderer if it exists, but it's not
-# accellerated on the Pie, force EGL. (Not tested, requires mame to
+# accellerated on the Pi, force EGL. (Not tested, requires mame to
 # use the render-target code)
 export SDL_RENDER_DRIVER=opengles2
 
