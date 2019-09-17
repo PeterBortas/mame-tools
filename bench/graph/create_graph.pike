@@ -265,7 +265,7 @@ string get_driver(string game)
     if(drivercache[game])
 	return drivercache[game];
     
-    string exe = combine_path( getenv("HOME"), "hack/mame-upstream/mame64" );
+    string exe = "/mametest/arch/x86_64-64/stored-mames/mame0212-gcc5-1182bd9/mame64";
     mapping res = Process.run( ({ exe, "-listsource", game }) );
     if(res->exitcode)
 	exit(1, "FATAL: Failed to get driver for %s\n", game);
