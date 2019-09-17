@@ -22,9 +22,17 @@ fi
 if [ VER = "git" ]; then
     MAME=$HOME/hack/mame-upstream/mame64
 else
-    MAME=$(ls -d /mametest/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${TAG}-gcc8-*/mame$EXE64)
+    MAME=$(ls -d /mametest/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${TAG}-gcc*-*/mame$EXE64)
 fi
 BASE=$(mktemp -d -t mame$TAG-$GAME-XXXXXXXXXX)
+
+ROMPATH=/mametest/roms/internetarchive
+if [ -e /mametest/roms/0.212 ]; then
+    ROMPATH=/mametest/roms/0.212
+fi
+if [ -e /mametest/roms/$VER ]; then
+    ROMPATH=/mametest/roms/$VER
+fi
 
 echo "Setting up and running in $BASE"
 
@@ -36,11 +44,21 @@ fi
 #EXTRA="-str 90 -nothrottle"
 #EXTRA="-bench 90"
 
-$MAME $EXTRA \
+MAC
+
+MAMECMD="$MAME $EXTRA \
       -window -nomax \
-      -rompath /mametest/roms/0.212 \
+      -rompath $ROMPATH \
       -cfg_directory $BASE/cfg \
       -nvram_directory $BASE/nvram \
       -snapshot_directory $BASE/snap \
       -diff_directory $BASE/diff \
-      $GAME
+      $GAME"
+
+if [ "$3" = "-strace" ]; then
+    strace -e open \
+	   $MAMECMD \
+	   2>&1 | grep -v ENOENT | grep roms
+else
+    $MAMECMD
+fi
