@@ -184,6 +184,8 @@ string create_table(mapping all_results, string type)
     return res;
 }
 
+
+mapping stats = ([]);
 // TODO: clean up both create_* functions, they contain a lot of cut'n'paste
 string create_chart(mapping all_results, string type)
 {
@@ -220,6 +222,7 @@ string create_chart(mapping all_results, string type)
 		if( !gamedata[game][version][type] ||
 		    !gamedata[game][version][type]->percent )
 		{
+		    stats->crashed += 1;
 		    // There is an entry, but it lacks data due to crash or timeout
 		    //TODO: Using Var.Null breaks encoding
 		    vbenches += ({ (["v":"null", "p":([
@@ -230,13 +233,16 @@ string create_chart(mapping all_results, string type)
 		    float percent = (float)gamedata[game][version][type]->percent;
 		    if(gamedata[game][version]->throttled_before != "0x0" ||
 		       gamedata[game][version]->throttled_after != "0x0") {
+			stats->throttled += 1;
 			vbenches += ({ (["v":percent, "p":(["style": "background-color:orange;" ]) ]) });
 		    } else {
+			stats->good += 1;
 			vbenches += ({ (["v":percent]) });
 		    }
 		}
 	    } else {
 		// There is no entry of this game for this version
+		stats->missing += 1;
 		vbenches += ({ (["v":"null" ]) });
 	    }
 	}
@@ -369,4 +375,5 @@ int main(int argc, array argv)
 	}
 	Stdio.write_file("output/"+benchid+".html", out);	
     }
+    werror("stats: %O\n", stats);
 }
