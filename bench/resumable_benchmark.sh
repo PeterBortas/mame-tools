@@ -21,7 +21,7 @@ _prepare_locking
 exlock_now || exit 0  # Locking cleanup is handled by a trap
 
 # Install cronjob if missing
-if crontab -l | grep resumable_benchmark >/dev/null 1>&2; then
+if crontab -l | grep resumable_benchmark >/dev/null 2>&1; then
     : # cronjob already installed
 else
     echo "Installing cronjob..."
