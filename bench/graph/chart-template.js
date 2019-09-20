@@ -136,17 +136,67 @@ function drawCharts() {
     // Make it possible to make URLs with preselected games
     var hashValue = location.hash
     if(hashValue) {
-	var tmp = hashValue.split("#")[1]; // Remove initial #
-	var games = tmp.split(":");
+	var hash = hashValue.split("#")[1]; // Remove initial #
+	var games = hash.split(":");
 	console.log("Games from hash: ", games);
 
-	var select_rows = [];
+	// extract non-game parameters
+	var drivers = [];
+	var realgames = [];
 	games.forEach( function(game, index) {
-	    var query = {"column":0, "value":game};
-	    var selection = tdata.getFilteredRows([ query ]);
-	    console.log("selection for "+ game +":", selection);
-	    select_rows.push({row:selection[0],column:null});
+	    var i = game.search(";");
+	    if(i != -1) {
+		parameter = game.substring(0, i);
+		switch(parameter) {
+		case "driver":
+		    drivers.push(game.substring(i+1));
+		    break;
+		default:
+		    console.log("unknown parameter: ", game);
+		}
+	    } else {
+		realgames.push(game);
+	    }		
 	});
+	games = realgames;
+
+	if(drivers.length == 0) {
+	    console.log("drivers: Nope!");
+	} else {
+	    console.log("drivers: ", drivers);
+	}
+	
+	var select_rows = [];
+	if(games.length != 0) { //There are games
+	    games.forEach( function(game, index) {
+		var query = {"column":0, "value":game};
+		var selection = tdata.getFilteredRows([ query ]);
+		console.log("selection for "+ game +":", selection);
+		if(drivers.length == 0) {
+		    console.log("No drivers, so show all");
+		    select_rows.push({row:selection[0],column:null});
+		} else {
+		    // FIXME: This is not very useful, OR games and drivers instead
+		    var driver = tdata.getValue(item.row, 1)
+		    console.log("Filtering on drivers", drivers, driver);
+		    if(drivers.indexOf(driver) != -1) {
+			console.log("Driver found", driver);
+			select_rows.push({row:selection[0],column:null});
+		    }
+		}
+	    });
+	} else {
+	    if(drivers.length != 0) { //No games, but drivers, OR them
+		drivers.forEach( function(driver, index) {
+		    var query = {"column":1, "value":driver};
+		    var selection = tdata.getFilteredRows([ query ]);
+		    console.log("selection for "+ driver +":", selection);
+		    selection.forEach( function(rownr) {
+			select_rows.push({row:rownr,column:null});
+		    });
+		});
+	    }
+	}
 	console.log("select_rows: ", select_rows);
 	
 	table.setSelection(null); // Clear existing selections
