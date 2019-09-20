@@ -210,9 +210,8 @@ echo "ARM overclock status: $(vcgencmd get_config arm_freq) kHz" >> $LOGFILE
 GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff"
 
 # Don't allow benchmarks to run for more than 10 x test time, aka 15min
-#TIMEOUT="timeout --kill-after=20 900"
-# Temporarily double time to check some edge cases
-TIMEOUT="timeout --kill-after=20 1800"
+TIMEOUT_WAIT=900
+TIMEOUT="timeout --kill-after=5 $TIMEOUT_WAIT"
 
 # Some games need initial setup to not be stuck forever on some setup
 # screen. These are created manually by starting the game with
@@ -225,7 +224,7 @@ done
 
 mkdir -p runstate/gameresults
 
-cat games.lst | while read game; do
+while read -r game; do
     case $game in
     *#*)
 	echo "Note: Skipping $game"
@@ -242,19 +241,25 @@ cat games.lst | while read game; do
     echo "Before run: $(get_temp) $(vcgencmd get_throttled)" >> $gamelog
     echo "Running real emulation benchmark" >> $gamelog
     $TIMEOUT $MAME -str 90 -nothrottle $GAMEARGS $game >> $gamelog 2>&1
+    if [ $? -eq 124 ]; then
+	echo "Timed out after ${TIMEOUT_WAIT}s" >> $gamelog
+    fi
     wait_for_cooldown
     echo "Running built in benchmark" >> $gamelog
     $TIMEOUT $MAME -bench 90           $GAMEARGS $game >> $gamelog 2>&1
     echo "After run: $(get_temp) $(vcgencmd get_throttled)" >> $gamelog
+    if [ $? -eq 124 ]; then
+	echo "Timed out after ${TIMEOUT_WAIT}s" >> $gamelog
+    fi
     echo "Completed $game at $(date)"
     reboot_if_throttled
-done
+done < games.lst
 
 echo "Completed run of $VER-$FREQ-$CC at $(date), removing from automatic queue"
 rm runstate/CURRENT_VERSION
 
 # Pull a new version from the queue and let cron take care of starting it
-cat runstate/queue | while read x; do
+while read -r x; do
     case $x in
     0.[0-9]*)
 	echo "Queueing up $x"
@@ -263,7 +268,7 @@ cat runstate/queue | while read x; do
 	exit 0
 	;;
     esac
-done
+done < runstate/queue
 
 # Uncomment if screensaver should be reactivated
 #xscreensaver-command -restart
