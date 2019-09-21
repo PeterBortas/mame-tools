@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Benchmarks whatever needs benchmarking continues to do so even if there is a reboot.
+# Highly Raspberry Pi specific benchmarks that completes a run even if
+# there is a reboot in the middle of it.
 
 # Version of mame to benchmark (can be omitted to continue an aborted run)
 VER=$1
@@ -115,27 +116,6 @@ turn_off_screensavers
 
 # Make sure we don't start the test accidentally while something else is running
 wait_for_load
-
-function get_temp {
-    vcgencmd measure_temp | sed 's/temp=\(.*\)\..*/\1/'
-}
-
-# Throttling sets in at 80C, so leave at least a 15C envelope to work in
-function wait_for_cooldown {
-    init_cool=1
-    while [ $(get_temp) -gt 64 ]; do
-	if [ $init_cool -eq 1 ]; then
-	    echo "Waiting for CPU to cool down before next run..."
-	    init_cool=0
-	fi
-	sleep 1
-	echo -ne "$(get_temp)C  \r"
-    done
-    echo
-    if [ $init_cool -eq 0 ]; then
-	echo " OK"
-    fi
-}
 
 # FIXME: Before the below message can be removed and actual
 # benchmarks can be done the following must be automatically
