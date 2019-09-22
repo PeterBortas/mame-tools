@@ -2,6 +2,10 @@
 
 Tools used to build, benchmark and test [Mame](https://github.com/mamedev/mame)
 
+**WARNING**: Do not use your development checkout pf Mame to run these
+scripts. They will irrevocably delete any local changes. Make sure you
+run these builds in a checkout dedicated for this purpose.
+
 Compiling Mame (lots and lots of Mames)
 =======================================
 
