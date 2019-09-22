@@ -14,6 +14,8 @@ fi
 VER=$1
 GAME=$2
 
+BENCHDIR=$(dirname $0)
+source ${BENCHDIR}/../functions.sh
 
 TAG=$(echo $VER | sed 's/\.//')
 if [ $(getconf LONG_BIT) -eq 64 ]; then
@@ -26,13 +28,7 @@ else
 fi
 BASE=$(mktemp -d -t mame$TAG-$GAME-XXXXXXXXXX)
 
-ROMPATH=/mametest/roms/internetarchive
-if [ -e /mametest/roms/0.212 ]; then
-    ROMPATH=/mametest/roms/0.212
-fi
-if [ -e /mametest/roms/$VER ]; then
-    ROMPATH=/mametest/roms/$VER
-fi
+ROMPATH="$(get_mame_romdir $VER)
 
 echo "Setting up and running in $BASE"
 
@@ -43,8 +39,6 @@ fi
 # For testing bench
 #EXTRA="-str 90 -nothrottle"
 #EXTRA="-bench 90"
-
-MAC
 
 MAMECMD="$MAME $EXTRA \
       -window -nomax \
