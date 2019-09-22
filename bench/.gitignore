@@ -1,5 +1,6 @@
-logs
-runstate
-initial_state
+logs/
+runstate/
+initial_state/
 games.lst
 sdl2test-*
+trash/
