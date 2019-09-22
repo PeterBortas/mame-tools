@@ -125,7 +125,7 @@ wait_for_load
 # echo "This file does not contain a valid publishable benchmark" >> $LOGFILE
 
 # TODO: Nice things to have
-# [ ] Log any sdram and GPU overclock
+# [ ] Log any sdram overclock on RPi[1-3]
 # [ ] -str saves the final frame in the snap dir. Do something with it
 
 echo "ARM overclock status: $(get_freq_arm) kHz" >> $LOGFILE
@@ -147,7 +147,8 @@ for x in initial_state/*; do
     (cd $x && tar cf - * | (cd ../../$STATEDIR && tar xvf -))
 done
 
-mkdir -p runstate/gameresults
+# Ask what the logfile would be for a dummy game and just create the dir
+mkdir -p $(dirname get_gamelog_name dummy1 dummy2 dummy3)
 
 while read -r game; do
     case $game in

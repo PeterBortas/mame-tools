@@ -43,6 +43,29 @@ function get_freq_sdrom {
     vcgencmd get_config sdram_freq | awk -F= '{print $2}'
 }
 
+# RPi specific
+function get_temp {
+    vcgencmd measure_temp | sed 's/temp=\(.*\)\..*/\1/'
+}
+
+# RPi specific
+# Throttling sets in at 80C, so leave at least a 15C envelope to work in
+function wait_for_cooldown {
+    init_cool=1
+    while [ $(get_temp) -gt 60 ]; do
+	if [ $init_cool -eq 1 ]; then
+	    echo "Waiting for CPU to cool down before next run..."
+	    init_cool=0
+	fi
+	sleep 1
+	echo -ne "$(get_temp)C  \r"
+    done
+    echo
+    if [ $init_cool -eq 0 ]; then
+	echo " OK"
+    fi
+}
+
 # Get Mame version to benchmark either from argv[1] or runstate/CURRENT_VERSION
 # side effect; sets VER and TAG
 function set_mame_version {
@@ -208,7 +231,7 @@ function get_gamelog_name {
     local game=$1
     local CC=$2
     local once=$3
-    local base="runstate/gameresults/$game-$(get_system_idname)-$CC.result"
+    local base="runstate/gameresults/$(get_system_idname)/$game-$(get_system_idname)-$CC.result"
     i=1
     local log=$base.$i
     if [ -f $log ]; then
