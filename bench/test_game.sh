@@ -28,7 +28,7 @@ else
 fi
 BASE=$(mktemp -d -t mame$TAG-$GAME-XXXXXXXXXX)
 
-ROMPATH="$(get_mame_romdir $VER)
+ROMPATH="$(get_mame_romdir $VER)"
 
 echo "Setting up and running in $BASE"
 
