@@ -5,22 +5,14 @@
 
 set -x
 
-# before mame0189 there is no dist.mak
-# use src/mame/machine/amiga.c{pp} as an indicator
-if [ ! -f src/mame/machine/amiga.cpp -a ! -f src/mame/machine/amiga.c ]; then
-    echo "FATAL: Needs to be run from mame base dir!"
-    exit 1
-fi
+ZTOOLDIR="$(dirname $0)"
+source ${ZTOOLDIR}/functions.sh
 
-FREERAM=$(free -m | grep Mem: | awk '{print $2}')
-if [ $FREERAM -lt 3500 ]; then
-    if lsmod | grep zram >/dev/null 2>&1; then
-	echo "NOTE: zram loaded"
-    else
-	echo "FATAL: zram needs to be loaded unless you have the 4G model"
-	exit 1
-    fi
-fi
+# Bail if CWD isn't a mame git checkout
+verify_mame_checkout
+
+# If < 4G RAM, require zram to be used
+verify_ram_size
 
 GCCVER=8
 
@@ -41,7 +33,6 @@ GITNAME=$(git describe --tags)
 
 STORENAME=$GITNAME-$CCNAME-$HASH
 STOREDIR=../stored-mames
-ZTOOLDIR="$(dirname $0)"
 
 case $(getconf LONG_BIT) in
     32)

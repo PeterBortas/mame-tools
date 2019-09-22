@@ -10,21 +10,10 @@
 shopt -s nullglob  # Do not return the glob itself if no files matches
 
 ZTOOLDIR="$(dirname $0)"
+source ${ZTOOLDIR}/functions.sh
 
-# before mame0189 there is no dist.mak
-# use src/mame/machine/amiga.c{pp} as an indicator
-if [ ! -f src/mame/machine/amiga.cpp -a ! -f src/mame/machine/amiga.c ]; then
-    echo "FATAL: Needs to be run from mame base dir!"
-    exit 1
-fi
-
-function disk_sentinel {
-    avail=$(df . | awk 'NR==2 { print $4 }')
-    if (( avail < 4000000 )); then
-	echo "FATAL: Not anoung space available!"
-	exit 1
-    fi
-}
+# Bail if CWD isn't a mame git checkout
+verify_mame_checkout 
 
 function cleanup_failed_builds {
     for x in mame0*.log; do
@@ -53,7 +42,7 @@ else
 fi
 
 for tag in $tags; do
-    disk_sentinel
+    verify_free_disk 4000000 # Require some minimum free space on the disk
     echo -en "\033[0;32m"
     echo "Checking out and building tag $tag"
     echo -en "\033[0m"

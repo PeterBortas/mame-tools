@@ -1,3 +1,7 @@
+# Requires bash, will not work with sh
+
+# Locking primitives taken from https://stackoverflow.com/questions/1715137/what-is-the-best-way-to-ensure-only-one-instance-of-a-bash-script-is-running
+
 # PRIVATE
 _lock()             { flock -$1 $LOCKFD; }
 _no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; }
@@ -63,6 +67,37 @@ function wait_for_cooldown {
     echo
     if [ $init_cool -eq 0 ]; then
 	echo " OK"
+    fi
+}
+
+# Bail if there isn't enough disk space available
+function verify_free_disk {
+    local min_avail=$1
+    local avail=$(df . | awk 'NR==2 { print $4 }')
+    if (( avail < $min_avail )); then
+	echo "FATAL: Not anoung space available!"
+	exit 1
+    fi
+}
+
+function verify_mame_checkout {
+    # before mame0189 there is no dist.mak
+    # use src/mame/machine/amiga.c{pp} as an indicator
+    if [ ! -f src/mame/machine/amiga.cpp -a ! -f src/mame/machine/amiga.c -a ! -g .git ]; then
+	echo "FATAL: Needs to be run from mame base dir!"
+	exit 1
+    fi
+}
+
+function verify_ram_size {
+    local ram=$(free -m | grep Mem: | awk '{print $2}')
+    if [ $ram -lt 3500 ]; then
+	if lsmod | grep zram >/dev/null 2>&1; then
+	    echo "NOTE: zram loaded"
+	else
+	    echo "FATAL: zram needs to be loaded if you have <4G RAM"
+	    exit 1
+	fi
     fi
 }
 
