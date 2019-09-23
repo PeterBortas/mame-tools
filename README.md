@@ -36,19 +36,19 @@ $ ls -d /mametest/roms/0.2*
 /mametest/roms/0.212  /mametest/roms/0.213
 ```
 
-Run setup to create //games.lst// and download roms if needed:
+Run setup to create *games.lst* and download roms if needed:
 ```
 cd /mametest/mame-tools/bench
 ./prepare_games.sh
 ```
 
 For games that need preparation before they can be started
-run //make_initial_state.sh <game>// and do whatever steps are
+run *make_initial_state.sh <game>* and do whatever steps are
 needed. For some games those steps are documented in bench/README.txt.
 
 This can be done on a different system/architechture than the
 benchmarks are run on. This state can later be cloned and tested by
-running //test_game.sh <mame version> <game>// and will automatically
+running *test_game.sh <mame version> <game>* and will automatically
 be picked up and cloned when running benchmarks.
 ```
 ./make_initial_state.sh sfiii
