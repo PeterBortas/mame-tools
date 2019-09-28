@@ -79,7 +79,8 @@ function drawCharts() {
 		var games = []; // For updating the hash part of the URL
 		sel.forEach( function(item) {
 		    // The table on the other hand is indexed from 0, so add 1
-		    show_columns.push(item.row+1);
+		    // Then compensate for 2 extra interval columns by *3
+		    show_columns.push(item.row*3+1);
 		    games.push( tdata.getValue(item.row, 0) );
 		});
 		// console.log("event show_colums:", show_columns);
@@ -99,6 +100,8 @@ function drawCharts() {
 		    }
 		}
 
+		// FIXME: Intervals are not show when selection is active
+		
 		var filtered_view = new google.visualization.DataView(cdata);
 		filtered_view.setColumns(show_columns);
 		chart.draw(filtered_view, trendoptions);
