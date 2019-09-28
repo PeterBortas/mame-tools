@@ -68,9 +68,9 @@ started by setting up a queue:
 ./pi_resumable_benchmark.sh 0.212
 ^C
 for x in 0.{176..213}; do
-    echo $x >> runstate/queue
+    echo $x >> runstate/queue-rpi4_1.75
 done
-echo 0.175 > runstate/CURRENT_VERSION
+echo 0.175 > runstate/CURRENT_VERSION-rpi4_1.75
 ```
 
 When running on other (much faster) platforms no special tricks are
@@ -83,7 +83,9 @@ version to test:
 ./resumable_benchmark.sh 0.213
 ```
 
-The benchmark is still resumable if it's aborted for some reason.
+The benchmark is still resumable if it's aborted for some reason as
+long as ONLYONCE=1 in the script. If ONLYONCE=0 then the benchmark
+will resume, but all games on the list will be re-benchmarked.
 
 Producing a HTML report from a selection of benchmarks
 ======================================================
@@ -92,7 +94,7 @@ Requirement: Pike 7.8+
 
 ```
 cd /mametest/mame-tools/bench/graph
-./create_graph.pike
+./create_graph.pike ../games.lst rpi4_1.75
 ```
 
 The result found in output/ can be viewed in a web browser either from

@@ -2,24 +2,35 @@
 
 // TODO: Clean up the parser mess
 
+string global_compiler; // Verify that all results are from the same compiler
+void verify_compiler(string compiler)
+{
+    if(!global_compiler)
+	global_compiler = compiler;
+    else {
+	if(global_compiler != compiler)
+	    exit(1, "FATAL: compiler missmatch, %O != %O", compiler, global_compiler);
+    }
+}
+
+//FIXME: Get all details from the files
+// Still in use:
+//    res->mameversion
 mapping parse_filename(string filename)
 {
     mapping res = ([]);
     filename = basename(filename);
 
-    //example: kof98-0.175-1750-gcc8.result
-    if(sscanf(filename, "%s-0.%d-%d-%s.result",
-	      res->game, res->version, res->freq, res->compiler) == 4) {
-	if(res->freq != 1750)
-	    exit(1, "FATAL: Fix the parser to handle overclocking!\n");
-	if(res->compiler != "gcc8")
-	    exit(1, "FATAL: Fix the parser to handle compilers!\n");
+    //example: 1943-xeon_x5570-0.212-gcc5.result.1
+    if(sscanf(filename, "%s-%s-0.%d-%s.result.%d",
+	      res->game, res->shortname, res->mameversion, res->compiler, res->runnr) == 5) {
 	return res;
-    } else {
-	exit(1, "FATAL: Unable to parse filename '%s'\n", filename);
     }
+
+    exit(1, "FATAL: Unable to parse filename '%s'\n", filename);
 }
 
+mapping test_types = ([]); // Keep track of which types have been seen
 mapping parse_result(string filename)
 {
     object resultlines = Stdio.File(filename)->line_iterator();
@@ -44,40 +55,64 @@ mapping parse_result(string filename)
 	    }
 	    break;
 	default:
+	    int temp;
+	    string throttled;
 	    if(sscanf(line, "Before run: %d throttled=%s",
-		      int dummy1, string dummy2) == 2) {
-		res->temp_before = dummy1;
-		res->throttled_before = dummy2;
+		      int temp, string throttled) == 2) {
+		res->temp_before = temp;
+		res->throttled_before = throttled;
 	    }
 	    if(sscanf(line, "After run: %d throttled=%s",
-		      int dummy1, string dummy2) == 2) {
-		res->temp_after = dummy1;
-		res->throttled_after = dummy2;
+		      int temp, string throttled) == 2) {
+		res->temp_after = temp;
+		res->throttled_after = throttled;
 	    }
 	    if(line == "Running real emulation benchmark") {
 		current_test_type = "real";
+		test_types[current_test_type] = true;
 		res->real = ([]);
 	    }
 	    if(line == "Running built in benchmark") {
 		current_test_type = "bench";
+		test_types[current_test_type] = true;
 		res->bench = ([]);
 	    }
-	    if(sscanf(line, "Average speed: %d.%d%% (%d seconds)",
-		      int dummy1, int dummy2, int dummy3) == 3) {
-		// % is float, but to avoid float conversion
-		// in this step grab ints and concatenate them
-		res[current_test_type]->percent = dummy1 +"."+ dummy2;
-		res[current_test_type]->runtime = dummy3;
+	    if(sscanf(line, "Average speed: %f%% (%d seconds)",
+		      float speed, int runtime) == 2) {
+		res[current_test_type]->percent = speed;
+		res[current_test_type]->runtime = runtime;
 		
 		if(res[current_test_type]->runtime != 89)
 		    exit(1, "FATAL: test runtime in '%s' is not 89s!", filename);
 	    }
-	    if(line == "Fatal error: Required files are missing, the machine cannot be run.") {
+	    if(line == "Fatal error: Required files are missing, the machine cannot be run.")
+	    {
 		res[current_test_type]->failtype = "missing files";
+	    }
+	    if(sscanf(line, "CC: %s", string compiler) == 1) {
+		verify_compiler(compiler);
+		res->compiler = compiler;
+	    }
+	    if(sscanf(line, "Mame: %s", string version) == 1) {
+		res->mameversion = version;
 	    }
 	    break;
 	}
-    }    
+    }
+    // FIXME: Only needed for earlier files that did no record compiler and mame version
+    // Remove this
+    if(!res->mameversion) {
+	mapping fileinfo = parse_filename(filename);
+	res->mameversion = "0."+ fileinfo->mameversion;
+	if(!res->compiler)
+	    res->compiler = fileinfo->compiler;
+    }
+
+    // FIXME: Hacks for non-RPi
+    if(!res->throttled_before)
+	res->throttled_before="0x0";
+    if(!res->throttled_after)
+	res->throttled_after="0x0";
     return res;
 }
 
@@ -111,7 +146,7 @@ string create_table(mapping all_results, string type)
 	    gamedata[game] += ([ version: games[game] ]);
 	}
     }
-    // werror("%O\n", gamedata);
+    //    werror("gamedata: %O\n", gamedata);
 
     foreach(sort(indices(gamedata)), string game) {
 	array vbenches = ({});
@@ -140,9 +175,11 @@ string create_table(mapping all_results, string type)
 		    vbenches += ({ (["v":"null", "p":([ "style": style ]) ]) });
 		} else {
 		    // Regular good entry (possibly throttled)
+		    // FIXME: Should not need cast any more
 		    float percent = (float)gamedata[game][version][type]->percent;
-		    if(gamedata[game][version]->throttled_before != "0x0" ||
-		       gamedata[game][version]->throttled_after != "0x0") {
+		    if( gamedata[game][version]->throttled_before != "0x0"
+			|| gamedata[game][version]->throttled_after != "0x0" )
+		    {
 			vbenches += ({ (["v":percent, "p":(["style": "background-color:orange;" ]) ]) });
 		    } else {
 			vbenches += ({ (["v":percent]) });
@@ -210,6 +247,11 @@ string create_chart(mapping all_results, string type)
 
     foreach(sort(indices(gamedata)), string game) {
 	cdata->cols += ({ (["id":"","label":game, "pattern":"","type":"number"]) });
+	// The next two columns are for min and max value
+	cdata->cols += ({ (["id":"","label":"","pattern":"","type":"number",
+			    "p":(["role":"interval"]) ]) });
+	cdata->cols += ({ (["id":"","label":"","pattern":"","type":"number",
+			    "p":(["role":"interval"]) ]) });
     }
 
     foreach(all_versions, string version) {
@@ -230,6 +272,7 @@ string create_chart(mapping all_results, string type)
 				     ]) ]) });
 		} else {
 		    // Regular good entry
+
 		    float percent = (float)gamedata[game][version][type]->percent;
 		    if(gamedata[game][version]->throttled_before != "0x0" ||
 		       gamedata[game][version]->throttled_after != "0x0") {
@@ -239,11 +282,27 @@ string create_chart(mapping all_results, string type)
 			stats->good += 1;
 			vbenches += ({ (["v":percent]) });
 		    }
+		    
 		}
 	    } else {
 		// There is no entry of this game for this version
 		stats->missing += 1;
 		vbenches += ({ (["v":"null" ]) });
+	    }
+	    if(gamedata[game][version][type] &&
+	       gamedata[game][version][type]->multi_percent) {
+		// Handles multiple runs. Straight average for now
+		// NOTE: copy_value if the order ever becomes important
+		array speeds = gamedata[game][version][type]->multi_percent;
+		float min_percent = sort(speeds)[0];
+		float max_percent = sort(speeds)[-1];
+		werror("min: %f, max: %f\n", min_percent, max_percent);
+		// FIXME: This will require experimenting with explicit column roles. See https://developers.google.com/chart/interactive/docs/roles
+		vbenches += ({ (["v":min_percent]) });
+		vbenches += ({ (["v":max_percent]) });
+	    } else {
+		vbenches += ({ (["v":"null"]) });
+		vbenches += ({ (["v":"null"]) });
 	    }
 	}
 
@@ -271,7 +330,7 @@ string get_driver(string game)
     if(drivercache[game])
 	return drivercache[game];
     
-    string exe = "/mametest/arch/x86_64-64/stored-mames/mame0212-gcc5-1182bd9/mame64";
+    string exe = "/mametest/arch/x86_64-64/stored-mames/mame0214-gcc8-24d07a1/mame64";
     mapping res = Process.run( ({ exe, "-listsource", game }) );
     if(res->exitcode)
 	exit(1, "FATAL: Failed to get driver for %s\n", game);
@@ -316,12 +375,15 @@ string get_driver(string game)
 
 int main(int argc, array argv)
 {
-    if(argc != 2) {
-	exit(1, "Usage: create_graph.pike <gamelist file>\n"
-	        "Example: create_graph.pike games.lst\n");
+    if(argc != 3) {
+	exit(1, "Usage: create_graph.pike <gamelist file> <system shortname>\n"
+	     "Examples:\n"
+	     "    ./create_graph.pike ../games.lst rpi4_1.75\n"
+	     "    ./create_graph.pike ../games.lst xeon_x5570\n");
     }
     string listfile = argv[1];
-    string result_base = "/mametest/mame-tools/bench/runstate/gameresults/";
+    string shortname = argv[2];
+    string result_base = "/mametest/mame-tools/bench/benchresult/"+ shortname +"/";
 
     array result_files = get_dir(result_base);
     mapping all_results = ([]);
@@ -330,49 +392,69 @@ int main(int argc, array argv)
 	if(game[0..0] == "#")
 	    continue; // Skip comments
 
-	// The result files are a bit free form because they are just
-	// the output from the mame binary
+	// The result files are a bit free form because they are
+	// partly the output from the mame binary
 	foreach( glob(game+"-*", result_files), string resultfile ) {
 	    string filename = result_base + resultfile;
-	    mapping fileinfo = parse_filename(filename);
-	    // werror("file: %s\n", filename);
+	    mapping result = parse_result(filename);
 
-	    mapping res = parse_result(filename);
-	    // werror("DEBUG fileinfo: %O\n", fileinfo);
-
-	    string mameversion = "0."+ fileinfo->version;
+	    // werror("result: %O\n", result);
+	    
+	    string mameversion = result->mameversion;
 	    if(! all_results[mameversion])
 		all_results[mameversion] = ([]);
-	    all_results[mameversion][game] = res;
+
+	    if(all_results[mameversion][game]) {
+		//FIXME: This ignores every parameter except the speed value
+		foreach( indices(test_types), string type) {
+		    if(result[type] && result[type]->percent) {
+			if(!all_results[mameversion][game][type]->multi_percent)
+			    all_results[mameversion][game][type]->multi_percent = ({});
+			all_results[mameversion][game][type]->multi_percent += ({ result[type]->percent });
+			all_results[mameversion][game][type]->percent = `+(@all_results[mameversion][game][type]->multi_percent) / sizeof(all_results[mameversion][game][type]->multi_percent);
+		    }
+		}
+	    } else {
+		all_results[mameversion][game] = result;
+	    }
+	    // werror("all_result[ver][game]: %O\n", all_results[mameversion][game]);
 	}
     }
-    // werror("%O\n", all_results);
 
-    foreach( ({"bench", "real"}), string type) {
+    // FIXME: write down more data in the results files so the hardcoding can stop
+    foreach( indices(test_types), string type) {
 	string table_data = create_table(all_results, type);
 	string chart_data = create_chart(all_results, type);
 	// werror("DEBUG table_data:\n%s\n", table_data);
 	// werror("DEBUG chart_data:\n%s\n", chart_data);
 
+	string flags;
+	switch(type) {
+	case "bench":
+	    flags="-bench 90";
+	    break;
+	case "real":
+	    flags="-str 90 -nothrottle";
+	    break;
+	default:
+	    exit(1, "FATAL: Unknown benchmark type %O", type);
+	}
+	
 	string template = Stdio.read_file("chart-template.js");
 	string out = replace( template,
 			      ({ "¤TABLEDATA¤", "¤CHARTDATA¤" }),
 			      ({ table_data,    chart_data    }) );
-	string benchid = "rpi4-1.75-gcc8-"+ type;
+	string benchid;
+	benchid = shortname +"-"+ global_compiler +"-"+ type;
+	    
 	mkdir("output");
 	Stdio.cp("index.html", "output/index.html");
 	Stdio.write_file("output/"+benchid+".js", out);
 
 	template = Stdio.read_file("html-template.html");
-	if(type == "bench") {
-	    out = replace( template,
-			   ({ "¤MAMEFLAGS¤", "¤BENCHID¤" }),
-			   ({ "-bench 90",   benchid     }) );
-	} else {
-	    out = replace( template,
-			   ({ "¤MAMEFLAGS¤",         "¤BENCHID¤" }),
-			   ({ "-str 90 -nothrottle", benchid     }) );
-	}
+	out = replace( template,
+		       ({ "¤MAMEFLAGS¤", "¤BENCHID¤" }),
+		       ({ flags,         benchid     }) );
 	Stdio.write_file("output/"+benchid+".html", out);	
     }
     werror("stats: %O\n", stats);

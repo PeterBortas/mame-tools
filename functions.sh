@@ -104,21 +104,26 @@ function verify_ram_size {
 # Get Mame version to benchmark either from argv[1] or runstate/CURRENT_VERSION
 # side effect; sets VER and TAG
 function set_mame_version {
-    if [ -z $1 ]; then
-	if [ ! -f runstate/CURRENT_VERSION ]; then
+    local ver=$1
+    local force=$2
+    local id=$(get_system_idname)
+    if [ -z $ver ]; then
+	if [ ! -f runstate/CURRENT_VERSION-$id ]; then
 	    echo "Usage: $0 <version>"
 	    echo "Example: $0 0.212"
 	    exit 1
 	else
-	    VER=$(cat runstate/CURRENT_VERSION)
+	    VER=$(cat runstate/CURRENT_VERSION-$id)
 	fi
     else
-	if [ -f runstate/CURRENT_VERSION ]; then
-	    echo "FATAL: There is already an automatic benchmark of $(cat runstate/CURRENT_VERSION) in progress!"
+	if [ -f runstate/CURRENT_VERSION -a x"$force" != "x--force" ]; then
+	    echo "FATAL: There is already an automatic benchmark of $(cat runstate/CURRENT_VERSION-$id) in progress!"
 	    exit 1
 	else
-	    VER=$1
-	    echo $VER > runstate/CURRENT_VERSION
+	    VER=$ver
+	    if [ x"$force" != "x--force" ]; then
+	       echo $VER > runstate/CURRENT_VERSION-$id
+	    fi
 	fi
     fi
     TAG=$(echo $VER | sed 's/\.//')
@@ -192,15 +197,15 @@ function get_system_idname {
 	# TODO: Handle frequencies generically
 	case $(get_freq_arm) in
 	    1500) ;; # default frequency
-	    1750) extra="-1.75" ;;
-	    2000) extra="-2.0" ;;
+	    1750) extra="_1.75" ;;
+	    2000) extra="_2.0" ;;
 	    *)
 		echo "FATAL: unhandled CPU frequency $(get_freq_arm)" 1>&2
 		exit 1
 	esac
 	case $(get_freq_gpu) in
 	    500) ;; # default frequency
-	    600) extra="${extra}-G600" ;;
+	    600) extra="${extra}_G600" ;;
 	    *)
 		echo "FATAL: unhandled GPU frequency $(get_freq_gpu)" 1>&2
 		exit 1
@@ -235,8 +240,9 @@ function turn_off_screensavers {
 }
 
 function wait_for_load {
-    init_load=1
-    while (( $(echo "$(awk '{print $1}' /proc/loadavg) > 0.5" |bc -l) )); do
+    local target_load=$1
+    local init_load=1
+    while (( $(echo "$(awk '{print $1}' /proc/loadavg) > $target_load" |bc -l) )); do
 	if [ $init_load -eq 1 ]; then
 	    echo -n "Waiting for load to go down before starting test.."
 	    init_load=0
@@ -250,34 +256,66 @@ function wait_for_load {
 }
 
 function queue_next_version {
+    if [ x"$1" = "x--force" ]; then
+	return
+    fi
+    local id=$(get_system_idname)
+    local found_next=0
+    # FIXME: Test this, looks like I changed it to non-subshell but am still using exit.
     while read -r x; do
 	case $x in
 	0.[0-9]*)
+	    found_next=1
 	    echo "Queueing up $x"
-	    echo $x > runstate/CURRENT_VERSION
-	    sed -i 's/^'$x'$/d' runstate/queue
+	    echo $x > runstate/CURRENT_VERSION-$id
+	    sed -i 's/^'$x'$/d' runstate/queue-$id
 	    exit 0
 	    ;;
 	esac
-    done < runstate/queue
+    done < runstate/queue-$id
+    if [ $found_next -eq 0 ]; then
+	echo "No queued version found. Stopping queue."
+	rm runstate/CURRENT_VERSION-$id
+    fi
 }
 
 function get_gamelog_name {
     local game=$1
-    local CC=$2
-    local once=$3
-    local base="runstate/gameresults/$(get_system_idname)/$game-$(get_system_idname)-$CC.result"
+    local cc=$2
+    local ver=$3
+    local once=$4
+    local base="benchresult/$(get_system_idname)/$game-$(get_system_idname)-$ver-$cc.result"
     i=1
     local log=$base.$i
     if [ -f $log ]; then
 	if [ $once -eq 1 ]; then
-	    return -1
+	    return 1
 	fi
     fi
     while [ -f $log ]; do
 	i=$(( i+1 ))
 	log=$base.$i
     done
+    mkdir -p $(dirname $log)
     echo $log
     return 0
+}
+
+function get_randomized_games {
+    target=$(mktemp -t mamebench.XXXXXXX)
+    cat games.lst | sort -R > $target
+    echo $target
+}
+
+
+# Some games need initial setup to not be stuck forever on some setup
+# screen. These are created manually by starting the game with
+# make_initial_state.sh
+function setup_initial_state {
+    statedir=$1
+    echo "Installing initial state in test environment..."
+    for x in initial_state/*; do
+	echo $x...
+	(cd $x && tar cf - * | (cd ../../$statedir && tar xvf -))
+    done
 }

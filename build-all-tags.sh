@@ -15,13 +15,6 @@ source ${ZTOOLDIR}/functions.sh
 # Bail if CWD isn't a mame git checkout
 verify_mame_checkout 
 
-function cleanup_failed_builds {
-    for x in mame0*.log; do
-	mkdir -p ../stored-mames/$(echo $x | sed 's/\.log//') &&
-	    mv -iv $x ../stored-mames/$(echo $x | sed 's/\.log//')/;
-    done
-}
-
 # drop any diffs caused by applying patches
 function cleanup_patches {
     if git diff-index --quiet HEAD --; then
@@ -35,6 +28,7 @@ function cleanup_patches {
 
 if [ -z "$1" ]; then
     # List all tags but remove the "u" versions
+    # TODO: Either build them all or maybe just the last u-version?
     tags="$(git tag | grep -v u | sort -r)" 
 else
     # Allow specific tag to be build
@@ -43,9 +37,7 @@ fi
 
 for tag in $tags; do
     verify_free_disk 4000000 # Require some minimum free space on the disk
-    echo -en "\033[0;32m"
-    echo "Checking out and building tag $tag"
-    echo -en "\033[0m"
+    echo -e "\033[0;32mChecking out and building tag $tag\033[0m"
     git checkout $tag || exit 1
     git clean -dfqx # this will murder local changes
     make clean # not needed with the above, but...
@@ -54,6 +46,5 @@ for tag in $tags; do
 	cp -v "$ZTOOLDIR/missing/dist.mak" .
     fi
     "$ZTOOLDIR/one-build-and-store.sh"
-    cleanup_failed_builds
     cleanup_patches
 done

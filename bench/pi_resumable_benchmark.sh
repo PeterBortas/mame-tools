@@ -115,7 +115,7 @@ fi
 turn_off_screensavers
 
 # Make sure we don't start the test accidentally while something else is running
-wait_for_load
+wait_for_load 0.5
 
 # FIXME: Before the below message can be removed and actual
 # benchmarks can be done the following must be automatically
@@ -138,17 +138,12 @@ GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATE
 TIMEOUT_WAIT=900
 TIMEOUT="timeout --kill-after=5 $TIMEOUT_WAIT"
 
-# Some games need initial setup to not be stuck forever on some setup
-# screen. These are created manually by starting the game with
-# make_initial_state.sh
-echo "Installing initial state in test environment..."
-for x in initial_state/*; do
-    echo $x...
-    (cd $x && tar cf - * | (cd ../../$STATEDIR && tar xvf -))
-done
+# Where needed, install game state as created by make_initial_state.sh
+setup_initial_state $STATEDIR
 
-# Ask what the logfile would be for a dummy game and just create the dir
-mkdir -p $(dirname get_gamelog_name dummy1 dummy2 dummy3)
+# Randomize the order games are benchmarked to suss out thermal or
+# other side effects from earlier runs.
+RANDGAMELST=$(get_randomized_games)
 
 while read -r game; do
     case $game in
@@ -156,7 +151,7 @@ while read -r game; do
 	echo "Note: Skipping $game"
 	continue
     esac
-    gamelog=$(get_gamelog_name $game $CC $ONLYONCE)
+    gamelog=$(get_gamelog_name $game $CC $VER $ONLYONCE)
     if [ $? -eq -1 ]; then
 	echo "NOTE: Skipping $game, $gamelog already exists"
 	continue
@@ -179,10 +174,9 @@ while read -r game; do
     fi
     echo "Completed $game at $(date)"
     reboot_if_throttled
-done < games.lst
+done < $RANDGAMELST
 
-echo "Completed run of $VER-$(get_system_idname)-$CC at $(date), removing from automatic queue"
-rm runstate/CURRENT_VERSION
+echo "Completed run of $VER-$(get_system_idname)-$CC at $(date)"
 
 # Pull a new version from the queue and let cron take care of starting it
 queue_next_version
