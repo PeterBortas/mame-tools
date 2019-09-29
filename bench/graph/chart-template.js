@@ -21,6 +21,13 @@ function drawCharts() {
     ¤TABLEDATA¤
 
     var tdata = new google.visualization.DataTable(jsonData);
+    var tformatter = new google.visualization.NumberFormat({
+	fractionDigits: 0
+    });
+    // Overshoots a bit on the number of columns, but that's fine
+    for(i=2; i<tdata.getNumberOfColumns(); i++) {
+	tformatter.format(tdata, i);
+    }
     var table = new google.visualization.Table(document.getElementById('table_div'));
 
     var toptions = {'showRowNumber': true, 'width': '100%', 'allowHtml': true, 'cssClassNames': cssClassNames};
@@ -35,9 +42,11 @@ function drawCharts() {
         title: 'Mame™ benchmarks (% of real-time, higher is better) running on ¤SYSTEMDESC¤',
 	// curveType: 'function',
         legend: { position: 'bottom' },
-	// vAxis: { scaleType: 'log' }
-	// hAxis: {title: 'Mame version'},
+	// vAxis: { scaleType: 'log' },
 	// vAxis: {title: '% of realtime'},
+	// hAxis: {title: 'Mame version'},
+	vAxis: {format: 'percent'},
+	//hAxis: {format: '#.###'}, // This removes 4th+ digit, but also removes trailing 0s
 	// trendlines: { 0: {visibleInLegend: true} }
 	// trendlines: {
 	//     0: {

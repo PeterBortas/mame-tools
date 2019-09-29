@@ -62,11 +62,17 @@ mapping parse_result(string filename)
 		      int temp, string throttled) == 2) {
 		res->temp_before = temp;
 		res->throttled_before = throttled;
+		//NOTE: I'm not really interested in undervoltage events right now
+		if(res->throttled_before == "0x50000")
+		    res->throttled_before = "0x0";
 	    }
 	    if(sscanf(line, "After run: %d throttled=%s",
 		      int temp, string throttled) == 2) {
 		res->temp_after = temp;
 		res->throttled_after = throttled;
+		//NOTE: I'm not really interested in undervoltage events right now
+		if(res->throttled_after == "0x50000")
+		    res->throttled_after = "0x0";
 	    }
 	    if(line == "Running real emulation benchmark") {
 		current_test_type = "real";
@@ -192,8 +198,7 @@ string create_table(mapping all_results, string type)
 		    vbenches += ({ (["v":"null", "p":([ "style": style ]) ]) });
 		} else {
 		    // Regular good entry (possibly throttled)
-		    // FIXME: Should not need cast any more
-		    float percent = (float)gamedata[game][version][type]->percent;
+		    float percent = gamedata[game][version][type]->percent;
 		    if( gamedata[game][version]->throttled_before != "0x0"
 			|| gamedata[game][version]->throttled_after != "0x0" )
 		    {
@@ -209,15 +214,23 @@ string create_table(mapping all_results, string type)
 	}
 
 	mapping note;
+	string note_text;
 	// Notes about game are hardcoded here
 	// FIXME: Move this to a separate file
 	switch(game) {
 	case "cubeqst":
-	    note = (["v":"†"]); break;
+	    note_text = "†"; break;
 	default:
-	    note = (["v":""]); break;
+	    note_text = ""; break;
 	}
 
+	// NOTE: Requires create_chart to have been run first
+	if(stats->games[game] && stats->games[game][type]) {
+	    note_text += sprintf(" (%d data points)", stats->games[game][type]->samples);
+	}
+
+	note = (["v":note_text]);
+	
 	tdata->rows += ({
 	    (["c": ({
 		(["v":game]),
@@ -239,7 +252,7 @@ string create_table(mapping all_results, string type)
 }
 
 
-mapping stats = ([]);
+mapping stats = ([ "games":([]) ]);
 // TODO: clean up both create_* functions, they contain a lot of cut'n'paste
 string create_chart(mapping all_results, string type)
 {
@@ -286,20 +299,21 @@ string create_chart(mapping all_results, string type)
 		    stats->crashed += 1;
 		    // There is an entry, but it lacks data due to crash or timeout
 		    //TODO: Using Var.Null breaks encoding
-		    vbenches += ({ (["v":"null", "p":([
-					 "style": "color:#006600; background-color:grey;",
-				     ]) ]) });
+		    vbenches += ({ (["v":"null" ]) });
 		} else {
 		    // Regular good entry
 
-		    float percent = (float)gamedata[game][version][type]->percent;
+		    // The Google Charts chart type will multiply the
+		    // value by 100 if it's told it's a percentage
+		    // value, so pre-devide it.
+		    float percent = gamedata[game][version][type]->percent;
 		    if(gamedata[game][version]->throttled_before != "0x0" ||
 		       gamedata[game][version]->throttled_after != "0x0") {
 			stats->throttled += 1;
-			vbenches += ({ (["v":percent, "p":(["style": "background-color:orange;" ]) ]) });
+			vbenches += ({ (["v":percent/100 ]) });
 		    } else {
 			stats->good += 1;
-			vbenches += ({ (["v":percent]) });
+			vbenches += ({ (["v":percent/100]) });
 		    }
 		    
 		}
@@ -310,6 +324,10 @@ string create_chart(mapping all_results, string type)
 	    }
 	    // tooltip that will be shown when hovering over a datapoint
 	    string tooltip = sprintf("%s <b>%s</b><br>\n", version, game);
+	    if(!stats->games[game])
+		stats->games[game]=([]);
+	    if(!stats->games[game][type])
+		stats->games[game][type]=([]);
 	    // FIXME: These depth of these tests are here for a
 	    // reason, but something is wrong when they are
 	    // needed. Examine what and remove
@@ -322,8 +340,8 @@ string create_chart(mapping all_results, string type)
 		float min_percent = sort(speeds)[0];
 		float max_percent = sort(speeds)[-1];
 		// FIXME: This will require experimenting with explicit column roles. See https://developers.google.com/chart/interactive/docs/roles
-		vbenches += ({ (["v":min_percent]) });
-		vbenches += ({ (["v":max_percent]) });
+		vbenches += ({ (["v":min_percent/100]) });
+		vbenches += ({ (["v":max_percent/100]) });
 		tooltip += sprintf("<table><tr><td align=right>average:</td><td>%.1f%%</td></tr>"
 				   "<tr><td align=right>min:</td><td>%.1f%%</td></tr>"
 				   "<tr><td align=right>max:</td><td>%.1f%%</td></tr></table>"
@@ -332,15 +350,17 @@ string create_chart(mapping all_results, string type)
 				   min_percent,
 				   max_percent,
 				   sizeof(speeds));
+		stats->games[game][type]->samples += sizeof(speeds);
 	    } else {
 		vbenches += ({ (["v":"null"]) });
 		vbenches += ({ (["v":"null"]) });
 		if(gamedata[game][version] &&
 		   gamedata[game][version][type] &&
 		   gamedata[game][version][type]->percent) {
-		    tooltip += sprintf("%f%%<br>(one datapoint)<br>",
+		    tooltip += sprintf("%.1f%%<br>(one datapoint)<br>",
 				       gamedata[game][version][type]->percent);
 		}
+		stats->games[game][type]->samples++;
 	    }
 	    string image = sprintf("screenshots/%s-%s.png", game, version);
 	    if(file_stat("output/"+image))
@@ -480,8 +500,11 @@ int main(int argc, array argv)
     
     // FIXME: write down more data in the results files so the hardcoding can stop
     foreach( indices(test_types), string type) {
-	string table_data = create_table(all_results, type);
+	// create_chart has the side effect of setting up some
+	// statistics needed for create_table, so the ordering is
+	// important
 	string chart_data = create_chart(all_results, type);
+	string table_data = create_table(all_results, type);
 	// werror("DEBUG table_data:\n%s\n", table_data);
 	// werror("DEBUG chart_data:\n%s\n", chart_data);
 
@@ -532,5 +555,6 @@ int main(int argc, array argv)
 		       ({ flags,         benchid,     system_desc     }) );
 	Stdio.write_file("output/"+benchid+".html", out);	
     }
+    stats->games = "removed (too verbose)";
     werror("stats: %O\n", stats);
 }
