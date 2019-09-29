@@ -324,12 +324,13 @@ string create_chart(mapping all_results, string type)
 		// FIXME: This will require experimenting with explicit column roles. See https://developers.google.com/chart/interactive/docs/roles
 		vbenches += ({ (["v":min_percent]) });
 		vbenches += ({ (["v":max_percent]) });
-		tooltip += sprintf("<table><tr><td align=right>average:</td><td>%f%%</td></tr>"
-				   "<tr><td align=right>min:</td><td>%f%%</td></tr>"
-				   "<tr><td align=right>max:</td><td>%f%%</td></tr></table>"
+		tooltip += sprintf("<table><tr><td align=right>average:</td><td>%.1f%%</td></tr>"
+				   "<tr><td align=right>min:</td><td>%.1f%%</td></tr>"
+				   "<tr><td align=right>max:</td><td>%.1f%%</td></tr></table>"
 				   "(%d datapoins)<br>",
 				   gamedata[game][version][type]->percent,
-				   min_percent, max_percent,
+				   min_percent,
+				   max_percent,
 				   sizeof(speeds));
 	    } else {
 		vbenches += ({ (["v":"null"]) });
