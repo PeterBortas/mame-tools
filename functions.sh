@@ -44,7 +44,7 @@ function get_freq_gpu {
 }
 
 # RPi specific (Note: not applicable on RPi4)
-function get_freq_sdrom {
+function get_freq_sdram {
     vcgencmd get_config sdram_freq | awk -F= '{print $2}'
 }
 
