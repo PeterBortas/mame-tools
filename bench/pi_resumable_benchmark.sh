@@ -5,11 +5,15 @@
 
 # Version of mame to benchmark (can be omitted to continue an aborted run)
 VER=$1
+FORCE=$2  # --force will ignore CURRENT_VERSION and not set
+	  # CURRENT_VERSION, for when running on parallel nodes in the
+	  # same dir.
 
 BENCHDIR=$(dirname $0)
 MAMEBASE="/mametest"
 CC=gcc8
-ONLYONCE=1  # should games be skipped if a benchmark already exists?
+ONLYONCE=0  # should games be skipped if a benchmark already exists?
+TESTREAL=0  # should the very slow real performance test be run?
 
 LOCKFILE="/run/lock/`basename $0`"
 LOCKFD=17
@@ -31,7 +35,7 @@ fi
 
 # Get Mame version to benchmark either from argv[1] or runstate/CURRENT_VERSION
 # side effect; sets VER and TAG
-set_mame_version $VER
+set_mame_version $VER $FORCE
 
 # Fail before starting to create dirs and cruft if any throttling flags have been triggered
 reboot_if_throttled
@@ -58,7 +62,7 @@ export DISPLAY=:0
 # use the render-target code)
 export SDL_RENDER_DRIVER=opengles2
 
-if $BENCHDIR/sdl2test-zino; then
+if $BENCHDIR/pi-bins/sdl2test-zino; then
     : # echo "NOTE: Renderer tested OK"
 else
     echo "FATAL: Renderer not available"
@@ -152,26 +156,28 @@ while read -r game; do
 	continue
     esac
     gamelog=$(get_gamelog_name $game $CC $VER $ONLYONCE)
-    if [ $? -eq -1 ]; then
+    if [ $? -eq 1 ]; then
 	echo "NOTE: Skipping $game, $gamelog already exists"
 	continue
     fi
     echo "Starting $game at $(date)"
     $MAME -listfull           $GAMEARGS $game >> $gamelog 2>&1
+    write_benchmark_header $gamelog
+    echo "ARM overclock status: $(get_freq_arm) kHz" >> $gamelog
+    echo "GPU overclock status: $(get_freq_gpu) kHz" >> $gamelog
+    echo "RAM overclock status: $(get_freq_sdram) kHz" >> $gamelog
     wait_for_cooldown
     echo "Before run: $(get_temp) $(vcgencmd get_throttled)" >> $gamelog
-    echo "Running real emulation benchmark" >> $gamelog
-    $TIMEOUT $MAME -str 90 -nothrottle $GAMEARGS $game >> $gamelog 2>&1
-    if [ $? -eq 124 ]; then
-	echo "Timed out after ${TIMEOUT_WAIT}s" >> $gamelog
+    if [ $TESTREAL -eq 1 ]; then
+	echo "Running real emulation benchmark" >> $gamelog
+	$TIMEOUT $MAME -str 90 -nothrottle $GAMEARGS $game >> $gamelog 2>&1
+	check_timeout $? >> $gamelog
+	wait_for_cooldown
     fi
-    wait_for_cooldown
     echo "Running built in benchmark" >> $gamelog
     $TIMEOUT $MAME -bench 90           $GAMEARGS $game >> $gamelog 2>&1
+    check_timeout $? >> $gamelog
     echo "After run: $(get_temp) $(vcgencmd get_throttled)" >> $gamelog
-    if [ $? -eq 124 ]; then
-	echo "Timed out after ${TIMEOUT_WAIT}s" >> $gamelog
-    fi
     echo "Completed $game at $(date)"
     reboot_if_throttled
 done < $RANDGAMELST
@@ -179,7 +185,7 @@ done < $RANDGAMELST
 echo "Completed run of $VER-$(get_system_idname)-$CC at $(date)"
 
 # Pull a new version from the queue and let cron take care of starting it
-queue_next_version
+queue_next_version $FORCE
 
 # Uncomment if screensaver should be reactivated
 #xscreensaver-command -restart

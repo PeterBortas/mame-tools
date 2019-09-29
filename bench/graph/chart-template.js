@@ -32,7 +32,7 @@ function drawCharts() {
     var cdata = new google.visualization.DataTable(jsonChart);
 
     var coptions = {
-        title: 'Mame™ benchmarks (% of real-time, higher is better) for RPi4, 2G RAM, overclocked to 1.75GHz',
+        title: 'Mame™ benchmarks (% of real-time, higher is better) running on ¤SYSTEMDESC¤',
 	// curveType: 'function',
         legend: { position: 'bottom' },
 	// vAxis: { scaleType: 'log' }
@@ -46,7 +46,8 @@ function drawCharts() {
 	//  	visibleInLegend: true,
 	//     },
 	//     1: {}
-	// }
+	// },
+	tooltip: { isHtml: true }, //FIXME: tooptips need better colours
     };
     
     var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
@@ -78,9 +79,13 @@ function drawCharts() {
 		var show_columns = [ 0 ];
 		var games = []; // For updating the hash part of the URL
 		sel.forEach( function(item) {
-		    // The table on the other hand is indexed from 0, so add 1
-		    // Then compensate for 2 extra interval columns by *3
-		    show_columns.push(item.row*3+1);
+		    // The table on the other hand is indexed from 0, so add 1.
+		    // Then compensate for 3 extra interval/tooltip columns by
+		    // *4 and grabbing all 4 columns for that game
+		    show_columns.push(item.row*4+1);
+		    show_columns.push(item.row*4+2);
+		    show_columns.push(item.row*4+3);
+		    show_columns.push(item.row*4+4);
 		    games.push( tdata.getValue(item.row, 0) );
 		});
 		// console.log("event show_colums:", show_columns);
@@ -100,7 +105,7 @@ function drawCharts() {
 		    }
 		}
 
-		// FIXME: Intervals are not show when selection is active
+		// FIXME: Show intervals when few enough games are selected, as with trends
 		
 		var filtered_view = new google.visualization.DataView(cdata);
 		filtered_view.setColumns(show_columns);

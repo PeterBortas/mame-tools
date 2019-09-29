@@ -1,15 +1,16 @@
 #!/usr/bin/env pike
 
-// TODO: Clean up the parser mess
-
-string global_compiler; // Verify that all results are from the same compiler
-void verify_compiler(string compiler)
+mapping runspecifics = ([]);
+void verify_runspecific(string name, string|int value)
 {
-    if(!global_compiler)
-	global_compiler = compiler;
-    else {
-	if(global_compiler != compiler)
-	    exit(1, "FATAL: compiler missmatch, %O != %O", compiler, global_compiler);
+    if(value == "")
+	return;
+
+    if(!runspecifics[name]) {
+	runspecifics[name] = value;
+    } else {
+	if(runspecifics[name] != value)
+	    exit(1, "FATAL: %s missmatch, %O != %O\n", name, value, runspecifics[name]);
     }
 }
 
@@ -81,6 +82,11 @@ mapping parse_result(string filename)
 		      float speed, int runtime) == 2) {
 		res[current_test_type]->percent = speed;
 		res[current_test_type]->runtime = runtime;
+
+		// FIXME: Remove this
+		if(speed == 0)
+		    exit(1, "FATAL: speed is 0 in %O:%O\n",
+			 speed, filename, current_test_type);
 		
 		if(res[current_test_type]->runtime != 89)
 		    exit(1, "FATAL: test runtime in '%s' is not 89s!", filename);
@@ -90,11 +96,22 @@ mapping parse_result(string filename)
 		res[current_test_type]->failtype = "missing files";
 	    }
 	    if(sscanf(line, "CC: %s", string compiler) == 1) {
-		verify_compiler(compiler);
-		res->compiler = compiler;
+		verify_runspecific("compiler", compiler);
 	    }
 	    if(sscanf(line, "Mame: %s", string version) == 1) {
 		res->mameversion = version;
+	    }
+	    if(sscanf(line, "System: %s", string id) == 1) {
+		verify_runspecific("systemid", id);
+	    }
+	    if(sscanf(line, "System type: %s", string systemtype) == 1) {
+		verify_runspecific("systemtype", systemtype);
+	    }
+	    if(sscanf(line, "System RAM: %sG", string gibs) == 1) {
+		verify_runspecific("systemram", gibs);
+	    }
+	    if(sscanf(line, "Num CPU: %d", int sockets) == 1) {
+		verify_runspecific("sockets", sockets);
 	    }
 	    break;
 	}
@@ -252,6 +269,8 @@ string create_chart(mapping all_results, string type)
 			    "p":(["role":"interval"]) ]) });
 	cdata->cols += ({ (["id":"","label":"","pattern":"","type":"number",
 			    "p":(["role":"interval"]) ]) });
+	cdata->cols += ({ (["id":"","label":"","pattern":"","type":"string",
+			    "p":(["role":"tooltip", "html":true]) ]) });
     }
 
     foreach(all_versions, string version) {
@@ -289,21 +308,45 @@ string create_chart(mapping all_results, string type)
 		stats->missing += 1;
 		vbenches += ({ (["v":"null" ]) });
 	    }
-	    if(gamedata[game][version][type] &&
+	    // tooltip that will be shown when hovering over a datapoint
+	    string tooltip = sprintf("%s <b>%s</b><br>\n", version, game);
+	    // FIXME: These depth of these tests are here for a
+	    // reason, but something is wrong when they are
+	    // needed. Examine what and remove
+	    if(gamedata[game][version] &&
+	       gamedata[game][version][type] &&
 	       gamedata[game][version][type]->multi_percent) {
 		// Handles multiple runs. Straight average for now
 		// NOTE: copy_value if the order ever becomes important
 		array speeds = gamedata[game][version][type]->multi_percent;
 		float min_percent = sort(speeds)[0];
 		float max_percent = sort(speeds)[-1];
-		werror("min: %f, max: %f\n", min_percent, max_percent);
 		// FIXME: This will require experimenting with explicit column roles. See https://developers.google.com/chart/interactive/docs/roles
 		vbenches += ({ (["v":min_percent]) });
 		vbenches += ({ (["v":max_percent]) });
+		tooltip += sprintf("<table><tr><td align=right>average:</td><td>%f%%</td></tr>"
+				   "<tr><td align=right>min:</td><td>%f%%</td></tr>"
+				   "<tr><td align=right>max:</td><td>%f%%</td></tr></table>"
+				   "(%d datapoins)<br>",
+				   gamedata[game][version][type]->percent,
+				   min_percent, max_percent,
+				   sizeof(speeds));
 	    } else {
 		vbenches += ({ (["v":"null"]) });
 		vbenches += ({ (["v":"null"]) });
+		if(gamedata[game][version] &&
+		   gamedata[game][version][type] &&
+		   gamedata[game][version][type]->percent) {
+		    tooltip += sprintf("%f%%<br>(one datapoint)<br>",
+				       gamedata[game][version][type]->percent);
+		}
 	    }
+	    string image = sprintf("screenshots/%s-%s.png", game, version);
+	    if(file_stat("output/"+image))
+		tooltip += sprintf("<img src=%s>", image);
+	    else
+		werror("Image %O not found\n", image);
+	    vbenches += ({ (["v":tooltip]) }); // tooltip
 	}
 
 	cdata->rows += ({
@@ -323,7 +366,6 @@ string create_chart(mapping all_results, string type)
     return res;
 }
 
-
 mapping(string:string) drivercache = ([]);
 string get_driver(string game)
 {
@@ -333,7 +375,8 @@ string get_driver(string game)
     string exe = "/mametest/arch/x86_64-64/stored-mames/mame0214-gcc8-24d07a1/mame64";
     mapping res = Process.run( ({ exe, "-listsource", game }) );
     if(res->exitcode)
-	exit(1, "FATAL: Failed to get driver for %s\n", game);
+	exit(1, "FATAL: Failed to get driver for %s\nstdout: %O\nstderr: %O",
+	     game, res->stdout, res->stderr);
     sscanf(res->stdout, game+"%*[ ]%s.cpp", string driver);
     drivercache[game] = driver;
     return driver;
@@ -400,27 +443,40 @@ int main(int argc, array argv)
 
 	    // werror("result: %O\n", result);
 	    
-	    string mameversion = result->mameversion;
-	    if(! all_results[mameversion])
-		all_results[mameversion] = ([]);
+	    string ver = result->mameversion;
+	    if(! all_results[ver])
+		all_results[ver] = ([]);
 
-	    if(all_results[mameversion][game]) {
-		//FIXME: This ignores every parameter except the speed value
+	    // If there is more than one test of the same game/version, average them
+	    //FIXME: This ignores every parameter except the speed value
+	    if(all_results[ver][game]) {
 		foreach( indices(test_types), string type) {
-		    if(result[type] && result[type]->percent) {
-			if(!all_results[mameversion][game][type]->multi_percent)
-			    all_results[mameversion][game][type]->multi_percent = ({});
-			all_results[mameversion][game][type]->multi_percent += ({ result[type]->percent });
-			all_results[mameversion][game][type]->percent = `+(@all_results[mameversion][game][type]->multi_percent) / sizeof(all_results[mameversion][game][type]->multi_percent);
+		    if(all_results[ver][game][type]) {
+			if(result[type] && result[type]->percent) {
+			    if(!all_results[ver][game][type]->multi_percent) {
+				if(all_results[ver][game][type]->percent) {
+				    all_results[ver][game][type]->multi_percent = ({all_results[ver][game][type]->percent});
+				} else {
+				    all_results[ver][game][type]->multi_percent = ({});
+				}
+			    }
+			    all_results[ver][game][type]->multi_percent += ({ result[type]->percent });
+			    all_results[ver][game][type]->percent = `+(@all_results[ver][game][type]->multi_percent) / sizeof(all_results[ver][game][type]->multi_percent);
+			}
+		    } else {
+			if(result[type])
+			    all_results[ver][game][type] = result[type];
 		    }
 		}
 	    } else {
-		all_results[mameversion][game] = result;
+		all_results[ver][game] = result;
 	    }
-	    // werror("all_result[ver][game]: %O\n", all_results[mameversion][game]);
+	    //werror("all_results[%s][%s]: %O\n", ver, game, all_results[ver][game]);
 	}
     }
 
+    // werror("all_results: %O\n", all_results);
+    
     // FIXME: write down more data in the results files so the hardcoding can stop
     foreach( indices(test_types), string type) {
 	string table_data = create_table(all_results, type);
@@ -439,13 +495,31 @@ int main(int argc, array argv)
 	default:
 	    exit(1, "FATAL: Unknown benchmark type %O", type);
 	}
+
+	werror("runspecifics: %O\n", runspecifics);
+
+	string cpus = "";
+	if(runspecifics->sockets > 1)
+	    cpus = sprintf("%d x ", runspecifics->sockets);
+
+	string system_desc;
+	switch(runspecifics->systemid) {
+	case "xeon_x5570": //crux
+	    system_desc = cpus +"Xeon X5570, "+ runspecifics->systemram +"G RAM, @2.93GHz. WARNING: machine not idle, only for testing, not usable as benchmark!";
+	    break;
+	case "rpi4_1.75":
+	    system_desc = "RPi4, "+ runspecifics->systemram +"G RAM, overclocked to 1.75GHz";
+	    break;
+	default:
+	    exit(1, "FATAL: Unhandled systemid %O\n", runspecifics->systemid);
+	}
 	
 	string template = Stdio.read_file("chart-template.js");
 	string out = replace( template,
-			      ({ "¤TABLEDATA¤", "¤CHARTDATA¤" }),
-			      ({ table_data,    chart_data    }) );
+			      ({ "¤TABLEDATA¤", "¤CHARTDATA¤", "¤SYSTEMDESC¤" }),
+			      ({ table_data,    chart_data,    system_desc    }) );
 	string benchid;
-	benchid = shortname +"-"+ global_compiler +"-"+ type;
+	benchid = shortname +"-"+ runspecifics->compiler +"-"+ type;
 	    
 	mkdir("output");
 	Stdio.cp("index.html", "output/index.html");
@@ -453,8 +527,8 @@ int main(int argc, array argv)
 
 	template = Stdio.read_file("html-template.html");
 	out = replace( template,
-		       ({ "¤MAMEFLAGS¤", "¤BENCHID¤" }),
-		       ({ flags,         benchid     }) );
+		       ({ "¤MAMEFLAGS¤", "¤BENCHID¤", "¤SYSTEMDESC¤"  }),
+		       ({ flags,         benchid,     system_desc     }) );
 	Stdio.write_file("output/"+benchid+".html", out);	
     }
     werror("stats: %O\n", stats);

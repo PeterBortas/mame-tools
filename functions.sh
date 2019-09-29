@@ -4,7 +4,7 @@
 
 # PRIVATE
 _lock()             { flock -$1 $LOCKFD; }
-_no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; }
+_no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; rm $RANDGAMELST; }
 _prepare_locking()  { eval "exec $LOCKFD>\"$LOCKFILE\""; trap _no_more_locking EXIT; }
 
 # PUBLIC
@@ -15,10 +15,10 @@ unlock()            { _lock u; }   # drop a lock
 function was_throttled {
     local throttled=$(vcgencmd get_throttled)
     # Do not report throttling on pure undervoltage events
-    if [ throttled != "throttled=0x0" -a throttled != "throttled=0x50000" ]; then
-	true
-    else
+    if [ $throttled = "throttled=0x0" -o $throttled = "throttled=0x50000" ]; then
 	false
+    else
+	true
     fi
 }
 
@@ -27,6 +27,7 @@ function reboot_if_throttled {
     if was_throttled; then
 	echo "FATAL: Pi has been throttled, will reboot at $(date)" >> runstate/reboot.log
 	./parse_throttle.py >> runstate/reboot.log
+	sync
 	sudo reboot
 	exit 1 # reboot does not block
     fi
@@ -318,4 +319,24 @@ function setup_initial_state {
 	echo $x...
 	(cd $x && tar cf - * | (cd ../../$statedir && tar xvf -))
     done
+}
+
+function write_benchmark_header {
+    local log=$1
+
+    echo "CC: $CC" >> $log
+    echo "Mame: $VER" >> $log
+    echo "Node: $(uname -n)" >> $log
+    echo "System: $(get_system_idname)" >> $log
+    echo "System type: $(get_system_type)" >> $log
+    echo "System RAM: $(get_mem_gigs)GiB" >> $log
+    echo "Num CPU: $(get_num_sockets)" >> $log
+    echo "Date: $(date --iso=seconds)" >> $log
+}
+
+function check_timeout {
+    local rcode=$1
+    if [ $rcode -eq 124 ]; then
+	echo "Timed out after ${TIMEOUT_WAIT}s"
+    fi
 }

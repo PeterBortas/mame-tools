@@ -127,19 +127,14 @@ while read -r game; do
     fi
     echo "Starting $game at $(date)"
     $MAME -listfull           $GAMEARGS $game >> $gamelog 2>&1
-    echo "CC: $CC" >> $gamelog
-    echo "Mame: $VER" >> $gamelog
-    echo "Node: $(uname -n)" >> $gamelog
+    write_benchmark_header $gamelog
     echo "Before run: $(uptime)" >> $gamelog
     echo "Running built in benchmark" >> $gamelog
     $TIMEOUT $MAME -bench 90           $GAMEARGS $game >> $gamelog 2>&1
+    check_timeout $? >> $gamelog
     echo "After run: $(uptime)" >> $gamelog
-    if [ $? -eq 124 ]; then
-	echo "Timed out after ${TIMEOUT_WAIT}s" >> $gamelog
-    fi
     echo "Completed $game at $(date)"
 done < $RANDGAMELST
 
 echo "Completed run of $VER-$(get_system_idname)-$CC at $(date)"
 queue_next_version $FORCE
-
