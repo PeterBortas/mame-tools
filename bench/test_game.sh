@@ -8,6 +8,7 @@ if [ -z $1 -o -z $2 ]; then
     echo "Usage: $0 <version> <game> [extra args for mame|-strace]"
     echo "Example: $0 0.212 sfiii"
     echo "Note: If version is set to git, $HOME/hack/mame-upstream/mame64 will be used"
+    echo "Useful extra arguments: -v, -sdlvideofps"
     exit 1
 fi
 
@@ -15,8 +16,8 @@ VER=$1
 GAME=$2
 MAMEBASE="/mametest"
 
-if [ ! -z $3 ]; then
-     if [ x$3 = x-strace ]; then
+if [ ! -z "$3" ]; then
+     if [ "x$3" = x-strace ]; then
 	 STRACE=1
      else
 	 EXTRAARGS="$3"
@@ -50,13 +51,22 @@ fi
 #EXTRA="-str 90 -nothrottle"
 #EXTRA="-str 90 -nothrottle -video accel"
 #EXTRA="-bench 90"
-#export DISPLAY=:0
-#unset SDL_RENDER_DRIVER
-#export SDL_RENDER_DRIVER=opengles2
 
 # If not running benchmark tests, run windowed
-if [ -z $EXTRA ]; then
+if [ -z "$EXTRA" ]; then
     USEWINDOW="-window -nomax"
+else
+    case $DISPLAY in
+    localhost:*)
+	if [ $(get_system_shortname) = rpi4 ]; then
+	    echo "RPi4 benchmark test mode"
+	    export DISPLAY=:0
+	    export SDL_RENDER_DRIVER=opengles2
+	fi
+	;;
+    *)
+	echo "Non-RPi test mode"
+    esac
 fi
 
 MAMECMD="$MAME $EXTRA $USEWINDOW $EXTRAARGS\
