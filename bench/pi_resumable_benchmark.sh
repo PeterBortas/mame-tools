@@ -12,6 +12,7 @@ FORCE=$2  # --force will ignore CURRENT_VERSION and not set
 BENCHDIR=$(dirname $0)
 MAMEBASE="/mametest"
 CC=gcc8
+CFLAGS="" # Should include extra optimization flags, not actual CFLAGS
 ONLYONCE=0  # should games be skipped if a benchmark already exists?
 TESTREAL=0  # should the very slow real performance test be run?
 
@@ -40,10 +41,9 @@ set_mame_version $VER $FORCE
 # Fail before starting to create dirs and cruft if any throttling flags have been triggered
 reboot_if_throttled
 
-if [ $(getconf LONG_BIT) -eq 64 ]; then
-    EXE64=64
-fi
-MAME=$(ls -d $MAMEBASE/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${TAG}-$CC-*/mame$EXE64)
+# side effect: Sets MAME
+set_mame_binary $TAG $CC $CFLAGS
+
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
 LOGFILE=logs/$RUNID.log
 STATEDIR=runstate/$RUNID

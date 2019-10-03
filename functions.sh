@@ -4,7 +4,7 @@
 
 # PRIVATE
 _lock()             { flock -$1 $LOCKFD; }
-_no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; rm $RANDGAMELST; }
+_no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; rm -f $RANDGAMELST; }
 _prepare_locking()  { eval "exec $LOCKFD>\"$LOCKFILE\""; trap _no_more_locking EXIT; }
 
 # PUBLIC
@@ -56,7 +56,7 @@ function get_temp {
 # RPi specific
 # Throttling sets in at 80C, so leave at least a 15C envelope to work in
 function wait_for_cooldown {
-    init_cool=1
+    local init_cool=1
     while [ $(get_temp) -gt 60 ]; do
 	if [ $init_cool -eq 1 ]; then
 	    echo "Waiting for CPU to cool down before next run..."
@@ -74,6 +74,7 @@ function wait_for_cooldown {
 # Bail if there isn't enough disk space available
 function verify_free_disk {
     local min_avail=$1
+
     local avail=$(df . | awk 'NR==2 { print $4 }')
     if (( avail < $min_avail )); then
 	echo "FATAL: Not anoung space available!"
@@ -107,6 +108,7 @@ function verify_ram_size {
 function set_mame_version {
     local ver=$1
     local force=$2
+
     local id=$(get_system_idname)
     if [ -z $ver ]; then
 	if [ ! -f runstate/CURRENT_VERSION-$id ]; then
@@ -148,6 +150,7 @@ function get_mem_gigs {
     echo $(( $(free -m | grep Mem: | awk '{print $2}') / 1024 +1 ))
 }
 
+# FIXME: Normally used in subshells, so fatal "exit" will not work
 function get_system_type {
     if [ -f /sys/firmware/devicetree/base/model ]; then
 	case $(tr -d '\0' </sys/firmware/devicetree/base/model) in
@@ -191,6 +194,8 @@ function get_system_shortname {
 
 # Something that identifies the hardware and it's configuration,
 # suitable as substring in a filename.
+#
+# FIXME: Normally used in subshells, so fatal "exit" will not work
 function get_system_idname {
     local extra=""
     case $(get_system_shortname) in
@@ -221,14 +226,41 @@ function get_system_idname {
 }
 
 function get_mame_romdir {
-    tmp=$MAMEBASE/roms/internetarchive
+    local ver=$1
+
+    local romdir=$MAMEBASE/roms/internetarchive
     if [ -e $MAMEBASE/roms/0.212 ]; then
-	tmp=$MAMEBASE/roms/0.212
+	romdir=$MAMEBASE/roms/0.212
     fi
-    if [ -e $MAMEBASE/roms/$1 ]; then
-	tmp=$MAMEBASE/roms/$1
+    if [ -e $MAMEBASE/roms/$ver ]; then
+	romdir=$MAMEBASE/roms/$ver
     fi
-    echo $tmp
+    echo $romdir
+}
+
+# Locate the mame binary to use
+# side effect: Sets MAME
+function set_mame_binary {
+    local tag=$1
+    local cc=$2
+    local cflags=$3
+
+    local exe64=""
+    if [ $(getconf LONG_BIT) -eq 64 ]; then
+	exe64=64
+    fi
+    # TODO: Set up infrastructure for building and testing with diffrent CFLAGS
+    if [ -z $cflags ]; then
+	COMPILETYPE=${cc}
+    else
+	COMPILETYPE=${cc}_${cflags}
+    fi
+    MAME=$(ls -d $MAMEBASE/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${tag}-${COMPILETYPE}-*/mame${exe64})
+    if [ ! -e "$MAME" ]; then
+	echo "FATAL: Could not find mame binary"
+	exit 1
+    fi
+    # echo "Using $MAME"
 }
 
 function turn_off_screensavers {
@@ -242,6 +274,7 @@ function turn_off_screensavers {
 
 function wait_for_load {
     local target_load=$1
+
     local init_load=1
     while (( $(echo "$(awk '{print $1}' /proc/loadavg) > $target_load" |bc -l) )); do
 	if [ $init_load -eq 1 ]; then
@@ -285,8 +318,9 @@ function get_gamelog_name {
     local cc=$2
     local ver=$3
     local once=$4
+
     local base="benchresult/$(get_system_idname)/$game-$(get_system_idname)-$ver-$cc.result"
-    i=1
+    local i=1
     local log=$base.$i
     if [ -f $log ]; then
 	if [ $once -eq 1 ]; then
@@ -303,22 +337,31 @@ function get_gamelog_name {
 }
 
 function get_randomized_games {
-    target=$(mktemp -t mamebench.XXXXXXX)
+    local target=$(mktemp -t mamebench.XXXXXXX)
     cat games.lst | sort -R > $target
     echo $target
 }
-
 
 # Some games need initial setup to not be stuck forever on some setup
 # screen. These are created manually by starting the game with
 # make_initial_state.sh
 function setup_initial_state {
-    statedir=$1
-    echo "Installing initial state in test environment..."
-    for x in initial_state/*; do
-	echo $x...
-	(cd $x && tar cf - * | (cd ../../$statedir && tar xvf -))
-    done
+    local statedir=$1
+    local game=$2
+
+    # Default is to install all states
+    if [ -z $2 ]; then
+	echo "Installing initial state in test environment..."
+	for x in initial_state/*; do
+	    echo $x...
+	    (cd $x && tar cf - * | (cd ../../$statedir && tar xvf -))
+	done
+    else
+	if [ -d initial_state/$game ]; then
+	    echo "Installing initial state in $statedir..."
+	    (cd initial_state/$game && tar cf - * | (cd $statedir && tar xvf -))
+	fi
+    fi
 }
 
 function write_benchmark_header {
@@ -336,6 +379,7 @@ function write_benchmark_header {
 
 function check_timeout {
     local rcode=$1
+
     if [ $rcode -eq 124 ]; then
 	echo "Timed out after ${TIMEOUT_WAIT}s"
     fi

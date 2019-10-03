@@ -27,20 +27,10 @@ exlock_now || exit 0  # Locking cleanup is handled by a trap
 # side effect; sets VER and TAG
 set_mame_version $VER $FORCE
 
-if [ $(getconf LONG_BIT) -eq 64 ]; then
-    EXE64=64
-fi
-# TODO: Set up infrastructure for building and testing with diffrent CFLAGS
-if [ -z $CFLAGS ]; then
-    COMPILETYPE=$CC
-else
-    COMPILETYPE=$CC_$CFLAGS
-fi
-MAME=$(ls -d $MAMEBASE/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${TAG}-${COMPILETYPE}-*/mame$EXE64)
-if [ -z $MAME ]; then
-    echo "FATAL: Could not find mame binary"
-    exit 1
-fi
+# side effect: Sets MAME
+set_mame_binary $TAG $CC $CFLAGS
+echo "Using $MAME"
+
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
 # Hostname specific dirs used as a rudimentary way of avoiding
 # conflicts when running many benchmarks in parallel
