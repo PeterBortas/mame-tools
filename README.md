@@ -2,7 +2,7 @@
 
 Tools used to build, benchmark and test [Mame](https://github.com/mamedev/mame)
 
-**WARNING**: Do not use your development checkout pf Mame to run these
+**WARNING**: Do not use your development checkout of Mame to run these
 scripts. They will irrevocably delete any local changes. Make sure you
 run these builds in a checkout dedicated for this purpose.
 
@@ -74,9 +74,8 @@ echo 0.175 > runstate/CURRENT_VERSION-rpi4_1.75
 ```
 
 When running on other (much faster) platforms no special tricks are
-used; no crontab, no reboots, no runtime monitoring of temperature and
-throttling, and there is no queue. Just run the benchmark with the
-version to test:
+used; no crontab, no reboots, no runtime monitoring of temperature or
+throttling. Just run the benchmark with the version to test:
 
 ```
 ./resumable_benchmark.sh 0.212

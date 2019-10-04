@@ -1,6 +1,11 @@
 # Requires bash, will not work with sh
 
+MAMEBASE="/mametest"
+
 # Locking primitives taken from https://stackoverflow.com/questions/1715137/what-is-the-best-way-to-ensure-only-one-instance-of-a-bash-script-is-running
+
+LOCKFILE="/run/lock/`basename $0`"
+LOCKFD=17
 
 # PRIVATE
 _lock()             { flock -$1 $LOCKFD; }

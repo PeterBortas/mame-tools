@@ -9,13 +9,9 @@ FORCE=$2  # --force will ignore CURRENT_VERSION and not set
 	  # same dir.
 
 BENCHDIR=$(dirname $0)
-MAMEBASE="/mametest"
 CC=gcc8
 CFLAGS="" # Should include extra optimization flags, not actual CFLAGS
 ONLYONCE=0  # should games be skipped if a benchmark already exists?
-
-LOCKFILE="/run/lock/`basename $0`"
-LOCKFD=17
 
 source ${BENCHDIR}/../functions.sh
 
