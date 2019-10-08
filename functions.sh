@@ -307,7 +307,7 @@ function queue_next_version {
 	    found_next=1
 	    echo "Queueing up $x"
 	    echo $x > runstate/CURRENT_VERSION-$id
-	    sed -i 's/^'$x'$/d' runstate/queue-$id
+	    sed -i '/^'$x'$/d' runstate/queue-$id  # NOTE: GNU sed specific
 	    exit 0
 	    ;;
 	esac
