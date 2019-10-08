@@ -1,5 +1,7 @@
 #!/usr/bin/env pike
 
+#define USE_SCREENSHOTS 0
+
 mapping runspecifics = ([]);
 void verify_runspecific(string name, string|int value)
 {
@@ -363,7 +365,7 @@ string create_chart(mapping all_results, string type)
 		stats->games[game][type]->samples++;
 	    }
 	    string image = sprintf("screenshots/%s-%s.png", game, version);
-	    if(file_stat("output/"+image))
+	    if(USE_SCREENSHOTS && file_stat("output/"+image))
 		tooltip += sprintf("<img src=%s>", image);
 	    else
 		werror("Image %O not found\n", image);
