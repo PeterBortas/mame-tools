@@ -253,6 +253,43 @@ string create_table(mapping all_results, string type)
     return res;
 }
 
+float get_speed(mapping game)
+{
+    if(!game)
+	return 0;
+    return game->percent;
+}
+
+//! Return the relative change in speed compared to the nearest
+//! previous data point
+string get_speed_diff(mapping gamedata, string game, string version, string type)
+{
+    float speed = get_speed(gamedata[game][version][type]);
+
+    foreach(reverse(sort(indices(gamedata[game]))), string old_ver) {
+	if((float)old_ver >= (float)version) {
+	    //	    werror("Skipping %O\n", old_ver);
+	    continue;
+	}
+	float old_speed = get_speed(gamedata[game][old_ver][type]);
+	if(old_speed) {
+	    float diff = speed - old_speed;
+	    float percent_change = (diff / old_speed)*100;
+	    constant cutoff = 2; // Don't clutter annotations with small changes
+	    if(abs(percent_change) < cutoff) {
+		return "null";
+	    } else {
+		string n = (string)(int)round(percent_change);
+		if(percent_change > 0)
+		    return "+"+n;
+		else
+		    return n;
+	    }
+	}
+    }
+
+    return "";
+}
 
 mapping stats = ([ "games":([]) ]);
 // TODO: clean up both create_* functions, they contain a lot of cut'n'paste
@@ -286,6 +323,8 @@ string create_chart(mapping all_results, string type)
 			    "p":(["role":"interval"]) ]) });
 	cdata->cols += ({ (["id":"","label":"","pattern":"","type":"string",
 			    "p":(["role":"tooltip", "html":true]) ]) });
+	cdata->cols += ({ (["id":"","label":"","pattern":"","type":"string",
+			    "p":(["role":"annotation", "html":true]) ]) });
     }
 
     foreach(all_versions, string version) {
@@ -333,15 +372,16 @@ string create_chart(mapping all_results, string type)
 	    // FIXME: These depth of these tests are here for a
 	    // reason, but something is wrong when they are
 	    // needed. Examine what and remove
+	    string annotation = "null";
 	    if(gamedata[game][version] &&
 	       gamedata[game][version][type] &&
 	       gamedata[game][version][type]->multi_percent) {
+		annotation = get_speed_diff(gamedata, game, version, type);
 		// Handles multiple runs. Straight average for now
 		// NOTE: copy_value if the order ever becomes important
 		array speeds = gamedata[game][version][type]->multi_percent;
 		float min_percent = sort(speeds)[0];
 		float max_percent = sort(speeds)[-1];
-		// FIXME: This will require experimenting with explicit column roles. See https://developers.google.com/chart/interactive/docs/roles
 		vbenches += ({ (["v":min_percent/100]) });
 		vbenches += ({ (["v":max_percent/100]) });
 		tooltip += sprintf("<table><tr><td align=right>average:</td><td>%.1f%%</td></tr>"
@@ -359,17 +399,22 @@ string create_chart(mapping all_results, string type)
 		if(gamedata[game][version] &&
 		   gamedata[game][version][type] &&
 		   gamedata[game][version][type]->percent) {
+		    annotation = get_speed_diff(gamedata, game, version, type);
 		    tooltip += sprintf("%.1f%%<br>(one datapoint)<br>",
 				       gamedata[game][version][type]->percent);
 		}
 		stats->games[game][type]->samples++;
 	    }
-	    string image = sprintf("screenshots/%s-%s.png", game, version);
-	    if(USE_SCREENSHOTS && file_stat("output/"+image))
-		tooltip += sprintf("<img src=%s>", image);
-	    else
-		werror("Image %O not found\n", image);
-	    vbenches += ({ (["v":tooltip]) }); // tooltip
+	    if(USE_SCREENSHOTS) {
+		string image = sprintf("screenshots/%s-%s.png", game, version);
+		if(file_stat("output/"+image)) {
+		    tooltip += sprintf("<img src=%s>", image);
+		} else {
+		    werror("Image %O not found\n", image);
+		}
+	    }
+	    vbenches += ({ (["v":tooltip]) });
+	    vbenches += ({ (["v":annotation]) });
 	}
 
 	cdata->rows += ({

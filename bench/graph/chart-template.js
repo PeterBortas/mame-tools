@@ -56,6 +56,11 @@ function drawCharts() {
 	//     },
 	//     1: {}
 	// },
+	annotations: { // FIXME: Turn off annotation stems too
+	    textStyle: {
+		opacity: 0.0 // Do not show annotations by default
+	    }
+	},
 	tooltip: { isHtml: true }, //FIXME: tooptips need better colours
     };
     
@@ -88,13 +93,15 @@ function drawCharts() {
 		var show_columns = [ 0 ];
 		var games = []; // For updating the hash part of the URL
 		sel.forEach( function(item) {
-		    // The table on the other hand is indexed from 0, so add 1.
-		    // Then compensate for 3 extra interval/tooltip columns by
-		    // *4 and grabbing all 4 columns for that game
-		    show_columns.push(item.row*4+1);
-		    show_columns.push(item.row*4+2);
-		    show_columns.push(item.row*4+3);
-		    show_columns.push(item.row*4+4);
+		    // The table on the other hand is indexed from 0,
+		    // so add 1.  Then compensate for 3 extra
+		    // interval/tooltip/annotation columns by *5 and
+		    // grabbing all 5 columns for that game
+		    show_columns.push(item.row*5+1);
+		    show_columns.push(item.row*5+2);
+		    show_columns.push(item.row*5+3);
+		    show_columns.push(item.row*5+4);
+		    show_columns.push(item.row*5+5);
 		    games.push( tdata.getValue(item.row, 0) );
 		});
 		// console.log("event show_colums:", show_columns);
@@ -111,6 +118,13 @@ function drawCharts() {
 	 		    visibleInLegend: false,
 			},
 			1: {},
+		    }
+		}
+
+		// If only a few games are selected, add show the annotations
+		if(sel.length<8) {
+		    trendoptions.annotations = {
+			textStyle: { opacity: 1.0 }
 		    }
 		}
 
