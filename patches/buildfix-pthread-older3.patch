@@ -1,0 +1,13 @@
+diff --git a/src/osd/sdl/sdl.mak b/src/osd/sdl/sdl.mak
+index 7ce9e39..f49629b 100644
+--- a/src/osd/sdl/sdl.mak
++++ b/src/osd/sdl/sdl.mak
+@@ -371,7 +371,7 @@ endif
+ 
+ INCPATH += `pkg-config --cflags fontconfig`
+ LIBS += `pkg-config --libs fontconfig`
+-LIBS += -lSDL_ttf -lutil
++LIBS += -lSDL_ttf -lutil -lpthread
+ 
+ endif # Unix
+ 

@@ -1,0 +1,13 @@
+diff --git a/src/osd/sdl/sdl.mak b/src/osd/sdl/sdl.mak
+index ff3e12b..94567af 100644
+--- a/src/osd/sdl/sdl.mak
++++ b/src/osd/sdl/sdl.mak
+@@ -604,3 +604,8 @@ zip:
+ 	zip -rq ../mame_$(BUILD_VERSION).zip $(DISTFILES) $(EXCLUDES)
+ 
+ endif
++
++# Old Mame build fix
++ifeq ($(TARGETOS),linux)
++LIBS += -lpthread
++endif

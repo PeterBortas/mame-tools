@@ -1,0 +1,12 @@
+diff --git a/src/osd/sdl/sdl.mak b/src/osd/sdl/sdl.mak
+index 97ef1f7..9134c3d 100644
+--- a/src/osd/sdl/sdl.mak
++++ b/src/osd/sdl/sdl.mak
+@@ -156,6 +156,7 @@ ifeq ($(TARGETOS),linux)
+ BASE_TARGETOS = unix
+ SYNC_IMPLEMENTATION = tc
+ SDL_NETWORK = taptun
++LIBS += -lpthread
+ endif
+ 
+ ifeq ($(TARGETOS),freebsd)
