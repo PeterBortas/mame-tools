@@ -330,7 +330,6 @@ string create_chart(mapping all_results, string type)
     foreach(all_versions, string version) {
 	array vbenches = ({});
 	string game_desc;
-	// foreach(sort(indices(gamedata[game])), string version) {
 	foreach(sort(indices(gamedata)), string game) {
 	    if(gamedata[game][version]) {
 		game_desc = gamedata[game][version]->game_desc; // Keep the newest one
