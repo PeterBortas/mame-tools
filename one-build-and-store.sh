@@ -33,6 +33,7 @@ GITNAME=$(git describe --tags)
 
 STORENAME=$GITNAME-$CCNAME-$HASH
 STOREDIR=../stored-mames
+VERSION=$(echo $GITNAME | sed 's/mame0\([0-9]*\).*/\1/')
 
 case $(getconf LONG_BIT) in
     32)
@@ -51,6 +52,13 @@ if [ -e $STOREDIR/$STORENAME ]; then
     exit 1
 fi
 
+# Make sure we have a dist.mak before starting so we don't fail after
+# all that compiling
+if [ ! -f dist.mak ]; then
+    echo "FATAL: Missing dist.mak"
+    exit 1
+fi
+
 ### Minimally patch old revisions to build on a modern Linux
 # Example build that breaks without this: mame0176
 if [ -f 3rdparty/bgfx/include/bgfx/bgfxplatform.h ]; then
@@ -60,6 +68,25 @@ if [ -f 3rdparty/bgfx/include/bgfx/bgfxplatform.h ]; then
 	patch -p1 < "$ZTOOLDIR/patches/buildfix-bgfx-sdlwindow.patch"
     fi
 fi
+
+# Pre mame0149 will fail due to missing -lpthread in the final linking stage
+if [ $VERSION -gt 146 -a $VERSION -lt 149 ]; then
+    patch -p1 < "$ZTOOLDIR/patches/buildfix-pthread.patch"
+fi
+if [ $VERSION -gt 144 -a $VERSION -lt 147 ]; then
+    patch -p1 < "$ZTOOLDIR/patches/buildfix-pthread-older.patch"
+fi
+if [ $VERSION -eq 144 ]; then
+    patch -p1 < "$ZTOOLDIR/patches/buildfix-pthread-older2.patch"
+fi
+#if [ $VERSION -gt 139 -a $VERSION -lt 144 ]; then
+#    patch -p1 < "$ZTOOLDIR/patches/buildfix-pthread-older3.patch"
+#fi
+# generic patch that should work better
+if [ $VERSION -gt 136 -a $VERSION -lt 145 ]; then
+    patch -p1 < "$ZTOOLDIR/patches/buildfix-pthread-older4.patch"
+fi
+# NOTE: sdl.mak does not exist in mame0136
 
 # 0.198-199 will not build on arm, see https://github.com/mamedev/mame/issues/3639
 if [ $GITNAME = mame0198 -o $GITNAME = mame0199 ]; then
@@ -78,6 +105,12 @@ function fake_missing_files {
 	echo "WARNING: No uismall.bdf, using one based on mame0211"
 	cp -v "$ZTOOLDIR/missing/uismall.bdf" .
     fi
+    for tool in castool chdman floptool imgtool jedutil ldresample ldverify nltool nlwav romcmp unidasm; do
+	if [ ! -f $tool ]; then
+	    echo "WARNING: No $tool, faking one"
+	    touch $tool
+	fi
+    done
     if [ ! -d language ]; then
 	mkdir -p language
     fi
@@ -98,13 +131,41 @@ if [ -d ../failed-builds/$STORENAME ]; then
     exit 0
 fi
 
-mkdir -p $STOREDIR
-echo "Build starting on $(date)" > $STORENAME.log
-time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >>$STORENAME.log 2>&1 ||
-    time make -j1 TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) >>$STORENAME.log 2>&1 &&
-    fake_missing_files &&
-    make -f dist.mak PTR64=$PTR64 >>$STORENAME.log 2>&1 &&
-    echo "Build completed on $(date)" >>$STORENAME.log &&
-    mv build/release/$ARCHDIR/Release/mame $STOREDIR/$STORENAME &&
-    mv $STORENAME.log $STOREDIR/$STORENAME/ ||
-	cp -a $(readlink -f ../mame) ../failed-builds/$STORENAME
+echo "Reinit log" > $STORENAME.log
+failed=0
+GENIE_ARGS="TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX)"
+
+# NOTE: tags older than mame0162 has a separate "mess" target
+# NOTE: tags older than mame0147 has mess in a separate mess repo
+# TODO: build mess from separate repo
+if [ $VERSION -lt 162 -a $VERSION -gt 146 ]; then
+    echo "mess build starting on $(date)" >> $STORENAME.log
+    (time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 $GENIE_ARGS TARGET=mess >>$STORENAME.log 2>&1 ||
+	 time make -j1 $GENIE_ARGS TARGET=mess >>$STORENAME.log 2>&1) \
+	     || failed="mess"
+fi
+
+if [ $failed = 0 ]; then
+    mkdir -p $STOREDIR
+    echo "mame build starting on $(date)" >> $STORENAME.log
+    time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 $GENIE_ARGS >>$STORENAME.log 2>&1 ||
+	time make -j1 $GENIE_ARGS >>$STORENAME.log 2>&1 &&
+	fake_missing_files &&
+	make -f dist.mak PTR64=$PTR64 >>$STORENAME.log 2>&1 &&
+	echo "Build completed on $(date)" >>$STORENAME.log &&
+	mv build/release/$ARCHDIR/Release/mame $STOREDIR/$STORENAME \
+	    || failed="mame"
+fi
+
+if [ $failed = 0 ]; then
+    if [ $VERSION -lt 162 -a $VERSION -gt 146 ]; then
+	cp mess$(getconf LONG_BIT) $STOREDIR/$STORENAME/
+	touch BUILT_OK_MESS
+    fi
+    echo "All build steps OK" >>$STORENAME.log
+    mv $STORENAME.log $STOREDIR/$STORENAME/
+    touch BUILT_OK_MAME
+else
+    echo "Build failed in $failed step" >>$STORENAME.log
+    cp -a $(readlink -f ../mame) ../failed-builds/$STORENAME
+fi
