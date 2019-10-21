@@ -27,9 +27,8 @@ function cleanup_patches {
 }
 
 if [ -z "$1" ]; then
-    # List all tags but remove the "u" versions
-    # TODO: Either build them all or maybe just the last u-version?
-    tags="$(git tag | grep -v u | sort -r)" 
+    # List all tags, including the "u" versions
+    tags="$(git tag | sort -r)"
 else
     # Allow specific tag to be build
     tags="$1"
