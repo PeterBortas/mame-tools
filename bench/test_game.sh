@@ -1,30 +1,28 @@
 #!/bin/bash
 
-# set -x
-
 # Starts the game in a separate environment and copies initial state if needed
 
 if [ -z "$1" -o -z "$2" ]; then
-    echo "Usage: $0 <version> <game> [extra args for mame|-strace]"
+    echo "Usage: $0 <version> <game> [-strace] [extra args for mame]"
     echo "Example: $0 0.212 sfiii"
     echo
-    echo "Useful extra arguments: -v, -sdlvideofps"
+    echo "Useful extra arguments: -v, -sdlvideofps, -ui_active"
     exit 1
 fi
 
 VER=$1
 GAME=$2
-MAMEBASE="/mametest"
+shift; shift
 
 CC=gcc8
 CFLAGS="" # Should include extra optimization flags, not actual CFLAGS
 
-if [ ! -z "$3" ]; then
-     if [ "x$3" = x-strace ]; then
+if [ ! -z "$1" ]; then
+     if [ "x$1" = x-strace ]; then
 	 STRACE=1
-     else
-	 EXTRAARGS="$3"
+	 shift
      fi
+     EXTRAARGS="$@"
 fi
 
 BENCHDIR=$(dirname $0)
@@ -71,10 +69,13 @@ MAMECMD="$MAME $EXTRA $USEWINDOW $EXTRAARGS \
       -diff_directory $BASE/diff \
       $GAME"
 
-if [ "x$3" = "x-strace" ]; then
+if [ "$STRACE" = 1 ]; then
+    echo "Running (instrace mode): $MAMECMD"
+    # NOTE: stdbuf used to avoid the pipe buffer
     strace -e open \
 	   $MAMECMD \
-	   2>&1 | grep -v ENOENT | grep roms
+	   2> >(stdbuf -oL -eL grep -v ENOENT | grep roms)
 else
+    echo "Running: $MAMECMD"
     $MAMECMD
 fi
