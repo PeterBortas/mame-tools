@@ -9,11 +9,13 @@ FORCE=$2  # --force will ignore CURRENT_VERSION and not set
 	  # same dir.
 
 BENCHDIR=$(dirname $0)
-CC=gcc8
 CFLAGS="" # Should include extra optimization flags, not actual CFLAGS
-ONLYONCE=0  # should games be skipped if a benchmark already exists?
 
 source ${BENCHDIR}/../functions.sh
+source ${BENCHDIR}/../config.sh
+
+CC=$GEN_BENCH_CC
+ONLYONCE=$GEN_ONLYONCE  # should games be skipped if a benchmark already exists?
 
 # Avoid running multiple instances of script.
 _prepare_locking

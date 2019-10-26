@@ -7,17 +7,15 @@ set -x
 
 ZTOOLDIR="$(dirname $0)"
 source ${ZTOOLDIR}/functions.sh
+source ${ZTOOLDIR}/config.sh
+CC=$COMP_CC
+CXX=$COMP_CXX
 
 # Bail if CWD isn't a mame git checkout
 verify_mame_checkout
 
 # If < 4G RAM, require zram to be used
 verify_ram_size
-
-GCCVER=8
-
-CC=gcc-$GCCVER
-CXX=g++-$GCCVER
 
 if which $CXX && which $CC; then
     echo "NOTE: compilers exist"

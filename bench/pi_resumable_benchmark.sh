@@ -10,12 +10,14 @@ FORCE=$2  # --force will ignore CURRENT_VERSION and not set
 	  # same dir.
 
 BENCHDIR=$(dirname $0)
-CC=gcc8
 CFLAGS="" # Should include extra optimization flags, not actual CFLAGS
-ONLYONCE=0  # should games be skipped if a benchmark already exists?
-TESTREAL=0  # should the very slow real performance test be run?
 
 source ${BENCHDIR}/../functions.sh
+source ${BENCHDIR}/../config.sh
+
+CC=$PI_BENCH_CC
+ONLYONCE=$PI_ONLYONCE  # should games be skipped if a benchmark already exists?
+TESTREAL=$PI_TESTREAL  # should the very slow real performance test be run?
 
 # Avoid running multiple instances of script.
 _prepare_locking
