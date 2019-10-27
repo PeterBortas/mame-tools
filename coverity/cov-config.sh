@@ -12,11 +12,14 @@ PROJECT=mame_partial
 PROJDIR=mame-partial
 PROJREPO=https://github.com/mamedev/mame.git
 
-MAKE_ARGS="REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp"
+# TODO: TOOLS=1
+MAKE_ARGS="DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp"
 
 # Specify "1" for very slow serial compile
 #MAKE_PAR=$(grep -c '^processor' /proc/cpuinfo)
 MAKE_PAR=1
+
+MAKE_PREPARE="make -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp; find build/linux_gcc/obj/x64/Release/ -mindepth 1 -maxdepth 1| grep -v 3rdparty | xargs rm -rf || exit 1"
 
 # COVSTREAM no longer in use, set to "default" or anything descriptive
 # that can be used are part of filename and URL.

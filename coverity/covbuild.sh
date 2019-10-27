@@ -189,6 +189,11 @@ export QT_SELECT=qt5
 BUILDNR=$(git rev-parse --short HEAD)
 EXTLOG=$WEBDIR/logs/$PROJ_DESC-${BUILDNR}.txt
 LOGURL=$PUBLICURL/logs/$(basename $EXTLOG)
+
+# Do pre-analysis setup, f.ex. build things that should not be
+# included in analysis
+time $MAKE_PREPARE
+
 if cov-build --dir cov-int make -j$MAKE_PAR $MAKE_ARGS 2>&1 | tee $EXTLOG; then
     mainlog "PASS"
     mainlog "`date`"
