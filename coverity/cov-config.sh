@@ -8,15 +8,16 @@ PROXYCONF=s3proxy
 PUBLICURL=http://mame-test.lysator.liu.se
 
 # PROJECT not set in env to allow parallel installations
-PROJECT=mamedev%2Fmame
-PROJDIR=mame
+PROJECT=mame_partial
+PROJDIR=mame-partial
 PROJREPO=https://github.com/mamedev/mame.git
 
-MAKE_ARGS="REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1"
+MAKE_ARGS="REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.c"
 
 # Specify "1" for very slow serial compile
-MAKE_PAR=$(grep -c '^processor' /proc/cpuinfo)
+#MAKE_PAR=$(grep -c '^processor' /proc/cpuinfo)
+MAKE_PAR=1
 
 # COVSTREAM no longer in use, set to "default" or anything descriptive
 # that can be used are part of filename and URL.
-COVSTREAM=default
+COVSTREAM=zinotest

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Build started $(date)" >> mame.log
+echo "Build started $(date)" >> build.log
 cd $(dirname $0)
-./covbuild.sh >> mame.log 2>&1
-echo "Build ended $(date)" >> mame.log
+./covbuild.sh >> build.log 2>&1
+echo "Build ended $(date)" >> build.log
