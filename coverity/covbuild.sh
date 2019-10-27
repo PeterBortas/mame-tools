@@ -12,7 +12,7 @@
 set -o pipefail
 set -x
 
-SCRIPTDIR=$(dirname $0)
+SCRIPTDIR=$(readlink -f $(dirname $SCRIPTDIR))
 cd $SCRIPTDIR
 
 # FIXME: The xenofarm logging parts of the code requires failures to
