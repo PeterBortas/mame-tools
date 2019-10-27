@@ -160,7 +160,7 @@ function setup_fastdisk {
 
 setup_fastdisk $PROJDIR $PROJREPO
 
-cd /fastdisk/$PROJDIR
+cd /fastdisk/$PROJDIR || exit 1
 rm -rf build
 WEBDIR=/fastdisk/webexport
 # Let the files linger for a one day in case Scan is slow to download them

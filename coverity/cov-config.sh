@@ -12,7 +12,7 @@ PROJECT=mame_partial
 PROJDIR=mame-partial
 PROJREPO=https://github.com/mamedev/mame.git
 
-MAKE_ARGS="REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.c"
+MAKE_ARGS="REGENIE=1 TOOLS=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp"
 
 # Specify "1" for very slow serial compile
 #MAKE_PAR=$(grep -c '^processor' /proc/cpuinfo)
