@@ -60,6 +60,9 @@ mainlog() {
 
 logindex=0
 irclog() {
+    #FIXME: disabled
+    return
+    
     mkdir -p /tmp/ircexport
     chmod 777 /tmp/ircexport
     logindex=$(($logindex + 1))
