@@ -158,7 +158,7 @@ function setup_fastdisk {
 
 # MAIN:
 
-setup-fastdisk $PROJDIR $PROJREPO
+setup_fastdisk $PROJDIR $PROJREPO
 
 cd /fastdisk/$PROJDIR
 rm -rf build
