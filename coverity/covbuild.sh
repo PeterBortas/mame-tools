@@ -199,7 +199,7 @@ LOGURL=$PUBLICURL/logs/$(basename $EXTLOG)
 
 # Do pre-analysis setup, f.ex. build things that should not be
 # included in analysis
-time bash -c $MAKE_PREPARE
+time bash -xc "$MAKE_PREPARE"
 if [ $? != 0 ]; then
     # TODO: This breaks Xenofarm log compatibility. Entire thing needs rewrite
     mainlog "FAIL"
