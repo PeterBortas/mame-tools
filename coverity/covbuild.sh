@@ -28,6 +28,13 @@ source /etc/scan-env
 # Config needs to contain PROJECT, MAKE_ARGS and MAKE_PAR. It may
 # contain PROXYCONF and/or PUBLICURL depending on the upload type
 # choosen.
+#
+# PROXYCONF settings:
+#     s3proxy:  Upload to S3 bucket and tell Scan to pull from that bucket
+#     nosubmit: Do not submit the result. For running tests of the process
+#     default:  Put file on local webserver and tell scan to pull from it
+# TODO: The code also supports the old HTTP put version, but that is not
+# exposed as a config
 source cov-config.sh
 
 # Project names commonly contain "%2" since they are based on girhub
@@ -192,7 +199,18 @@ LOGURL=$PUBLICURL/logs/$(basename $EXTLOG)
 
 # Do pre-analysis setup, f.ex. build things that should not be
 # included in analysis
-time $MAKE_PREPARE
+time bash -c $MAKE_PREPARE
+if [ $? != 0 ]; then
+    # TODO: This breaks Xenofarm log compatibility. Entire thing needs rewrite
+    mainlog "FAIL"
+    mainlog "`date`"
+    irclog "Preparation step failed"
+    exit 1
+fi
+
+# FIXME: remove this debug printf
+echo "Relese dir files:"
+ls build/linux_gcc/obj/x64/Release/ || echo "WARNING: No release dir"
 
 if cov-build --dir cov-int make -j$MAKE_PAR $MAKE_ARGS 2>&1 | tee $EXTLOG; then
     mainlog "PASS"
@@ -215,14 +233,19 @@ if cov-build --dir cov-int make -j$MAKE_PAR $MAKE_ARGS 2>&1 | tee $EXTLOG; then
 	mainlog "BEGIN cov-scan-upload"
 	mainlog "`date`"
 
-	if [ "$PROXYCONF" = "s3proxy" ]; then
-	    echo "Uploading to $S3DESC"
-	    upload_to_s3
-	fi
-	if [ $? -eq 0 ]; then
-	    upload_for_scan_pull $PROXYCONF
-	else
+	if [ "$PROXYCONF" = "nosubmit" ]; then
+	    echo "WARNING: nosubmit specified, no results submitted to Scan"
 	    false
+	else
+	    if [ "$PROXYCONF" = "s3proxy" ]; then
+		echo "Uploading to $S3DESC"
+		upload_to_s3
+	    fi
+	    if [ $? -eq 0 ]; then
+		upload_for_scan_pull $PROXYCONF
+	    else
+		false
+	    fi
 	fi
 	
 	#TODO: This is a kludge for Scans flaky uploading of large archives
@@ -245,7 +268,7 @@ if cov-build --dir cov-int make -j$MAKE_PAR $MAKE_ARGS 2>&1 | tee $EXTLOG; then
 	# 	echo "data:"
 	# 	cat xenofarm_result/upload_log.data
 	# else
-    
+
 	if [ $? != 0 ]; then
      	    mainlog "FAIL"
 	    irclog "Build OK. Upload to Scan failed ($LOGURL)"

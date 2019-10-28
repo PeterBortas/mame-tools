@@ -2,7 +2,8 @@
 # takes too long. To minimize the chance of that the package can be
 # pushed to an S3 datacenter close to Scan before telling Scan to
 # fetch it.
-PROXYCONF=s3proxy
+#PROXYCONF=s3proxy
+PROXYCONF=nosubmit
 
 # Project specific settings
 PUBLICURL=http://mame-test.lysator.liu.se
@@ -19,7 +20,7 @@ MAKE_ARGS="DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp"
 #MAKE_PAR=$(grep -c '^processor' /proc/cpuinfo)
 MAKE_PAR=1
 
-MAKE_PREPARE="make -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp; find build/linux_gcc/obj/x64/Release/ -mindepth 1 -maxdepth 1| grep -v 3rdparty | xargs rm -rf || exit 1"
+MAKE_PREPARE="make -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 DEPRECATED=0 NOWERROR=1 SOURCES=src/mame/drivers/pacman.cpp ; echo Removing non-3rdparty objects ; find build/linux_gcc/obj/x64/Release/ -mindepth 1 -maxdepth 1 | grep -v 3rdparty | xargs rm -rfv"
 
 # COVSTREAM no longer in use, set to "default" or anything descriptive
 # that can be used are part of filename and URL.
