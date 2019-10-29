@@ -2,15 +2,17 @@
 # takes too long. To minimize the chance of that the package can be
 # pushed to an S3 datacenter close to Scan before telling Scan to
 # fetch it.
-#PROXYCONF=s3proxy
-PROXYCONF=nosubmit
+#SUBMITMETHOD=s3proxy
+SUBMITMETHOD=nosubmit
 
 # Project specific settings
 PUBLICURL=http://mame-test.lysator.liu.se
 
-# PROJECT not set in env to allow parallel installations
+# Name of project on scan.coverity.com
 PROJECT=mame_partial
+# Directory name for checked out project, allows several checkouts of same repo
 PROJDIR=mame-partial
+# Git repo to clone
 PROJREPO=https://github.com/mamedev/mame.git
 
 # TODO: TOOLS=1
@@ -25,3 +27,10 @@ MAKE_PREPARE="make -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 DEPRECATED=
 # COVSTREAM no longer in use, set to "default" or anything descriptive
 # that can be used are part of filename and URL.
 COVSTREAM=zinotest
+
+# IRC notifications requires separate irc client that picks up the
+# logg messages and post them to IRC
+IRCNOTIFY=0
+
+# Project specific environment that needs to be set up before running make
+export QT_SELECT=qt5 
