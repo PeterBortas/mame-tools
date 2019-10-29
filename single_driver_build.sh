@@ -64,7 +64,24 @@ echo
 # FIXME: Or better; write down current hash when compiling and only
 #        clean up/REGENIE when the hash has changed
 
-time make -k -j$(grep -c '^processor' /proc/cpuinfo) $GENIE_ARGS ||
+function needs_cleaning {
+    last_hash=$(cat last_build_hash)
+    cur_hash=$(git rev-parse --short HEAD)
+    if [ $cur_hash != "$last_hash" ]; then
+	echo $cur_hash > last_build_hash
+	return 0
+    fi
+    return 1
+}
+
+
+if needs_cleaning; then
+    echo "NOTE: Source has changed, cleaning up"
+    make clean
+    REGENIE="REGENIE=1"
+fi
+
+time make -k -j$(grep -c '^processor' /proc/cpuinfo) $GENIE_ARGS $REGENIE ||
     time make -j1 $GENIE_ARGS
 
 mv -iv $DRIVER${postfix} $(dirname $MAME)/mame${postfix}-$DRIVER
