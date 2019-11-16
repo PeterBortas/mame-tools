@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # FIXME: needlessly hardcoded in general
 
 arch=xeon_e5_2660
