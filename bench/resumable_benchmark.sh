@@ -14,6 +14,9 @@ CFLAGS="" # Should include extra optimization flags, not actual CFLAGS
 source ${BENCHDIR}/../functions.sh
 source ${BENCHDIR}/../config.sh
 
+# Identifier of the optimization and arch options used to build Mame
+OPT_ID=$(get_optimization_id)
+
 CC=$GEN_BENCH_CC
 ONLYONCE=$GEN_ONLYONCE  # should games be skipped if a benchmark already exists?
 
@@ -26,7 +29,7 @@ exlock_now || exit 0  # Locking cleanup is handled by a trap
 set_mame_version $VER $FORCE
 
 # side effect: Sets MAME
-set_mame_binary $TAG $CC $CFLAGS
+set_mame_binary $TAG $CC $OPT_ID
 echo "Using $MAME"
 
 RUNID=$(basename $(dirname $MAME))-$(date '+%Y-%m-%dT%H:%M:%S')
@@ -44,7 +47,11 @@ ROMPATH=$(get_mame_romdir $VER)
 
 # Hardcode mame.ini, verified to be picked up even if -cfg_directory is used
 # Note: All the artwork options are probably useless in ~0.212+
-cat > ~/.mame/mame.ini <<EOF
+mkdir -p ~/.mame
+if grep "samplerate    22050" ~/.mame/mame.ini >/dev/null 2>&1; then
+    echo "NOTE: not rewriting mame.ini"
+else
+    cat > ~/.mame/mame.ini <<EOF
 #
 # CORE ARTWORK OPTIONS
 #
@@ -63,10 +70,11 @@ samplerate    22050
 #
 filter        0
 EOF
+fi
 
 # Make sure we don't start the test accidentally while something else is running
-# FIXME: Lower to 0.5
-wait_for_load 30
+# TODO: Change to something more sensible on a cluster to avoid wasting CPU
+wait_for_load 0.5
 
 GAMEARGS="-rompath $ROMPATH -cfg_directory $STATEDIR/cfg -nvram_directory $STATEDIR/nvram -snapshot_directory $STATEDIR/snap -diff_directory $STATEDIR/diff"
 
@@ -108,7 +116,7 @@ while read -r game; do
 	echo "Note: Skipping $game"
 	continue
     esac
-    gamelog=$(get_gamelog_name $game $CC $VER $ONLYONCE)
+    gamelog=$(get_gamelog_name $game $CC $VER $ONLYONCE $OPT_ID)
     if [ $? -eq 1 ]; then
 	echo "NOTE: Skipping $game, $gamelog already exists"
 	continue
@@ -125,4 +133,5 @@ while read -r game; do
 done < $RANDGAMELST
 
 echo "Completed run of $VER-$(get_system_idname)-$CC at $(date)"
+rm $RANDGAMELST
 queue_next_version $FORCE

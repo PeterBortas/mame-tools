@@ -1,10 +1,18 @@
 # Requires bash, will not work with sh
 
-MAMEBASE="/mametest"
+MAMEBASE="$HOME/mame-stuff"
+shopt -s extglob  # Extended globing needed for the mame binary locator
 
 # Locking primitives taken from https://stackoverflow.com/questions/1715137/what-is-the-best-way-to-ensure-only-one-instance-of-a-bash-script-is-running
 
-LOCKFILE="/run/lock/`basename $0`"
+# No one follows the Linux FHS, hunt for a usable dir
+# TODO: Move directory hunt to lock preparation function
+for lockdir in /run/user/$UID /run/lock /var/lock /dev/shm /tmp; do
+    if [ -w $lockdir ]; then
+	LOCKFILE="${lockdir}/$(basename $0)"
+	break
+    fi
+done
 LOCKFD=17
 
 # PRIVATE
@@ -115,6 +123,7 @@ function set_mame_version {
     local force=$2
 
     local id=$(get_system_idname)
+    mkdir -p runstate
     if [ -z $ver ]; then
 	if [ ! -f runstate/CURRENT_VERSION-$id ]; then
 	    echo "Usage: $0 <version>"
@@ -173,11 +182,17 @@ function get_system_type {
     "crux")
 	echo "ProLiant DL160 G6"
 	return ;;
-    n16[0-9][0-9])
-	echo "DL980 G7"
+    "analysator-system.lysator.liu.se")
+	echo "ProLiant DL180 G6"
+	return ;;
+    n159[4-6]*|n1600*)
+	echo "ProLiant SL250s G8"
+	return ;;
+    n16[0-9][0-9]*)
+	echo "Proliant DL980 G7"
 	return ;;
     n[0-9]*)
-	echo "SL230s G8"
+	echo "ProLiant SL230s G8"
 	return ;;
     esac
 }
@@ -191,9 +206,12 @@ function get_system_shortname {
     local cpu=$(get_cpu_type | sed 's/(R)//g')
     case $cpu in
     "Intel Xeon CPU"*)
-	local id=$(echo $cpu | awk '{print tolower($4)}')
+	local id=$(echo $cpu | awk '{print tolower($4)}' | sed 's/-/_/')
 	echo "xeon_$id"
 	return ;;
+    *)
+        echo "FATAL: Unable to produce CPU id"
+	exit 1
     esac
 }
 
@@ -248,19 +266,17 @@ function get_mame_romdir {
 function set_mame_binary {
     local tag=$1
     local cc=$2
-    local cflags=$3
+    local opt_id=$3
 
     local exe64=""
     if [ $(getconf LONG_BIT) -eq 64 ]; then
 	exe64=64
     fi
-    # TODO: Set up infrastructure for building and testing with diffrent CFLAGS
-    if [ -z $cflags ]; then
-	COMPILETYPE=${cc}
-    else
-	COMPILETYPE=${cc}_${cflags}
+
+    if [ ! -z $opt_id ]; then
+	opt_id="-${opt_id}"
     fi
-    MAME=$(ls -d $MAMEBASE/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${tag}-${COMPILETYPE}-*/mame${exe64})
+    MAME=$(ls -d $MAMEBASE/arch/$(uname -m)-$(getconf LONG_BIT)/stored-mames/mame${tag}-${cc}-+([0-9a-f])${opt_id}/mame${exe64})
     if [ ! -e "$MAME" ]; then
 	echo "FATAL: Could not find mame binary"
 	exit 1
@@ -299,6 +315,11 @@ function queue_next_version {
 	return
     fi
     local id=$(get_system_idname)
+    local queue_file=runstate/CURRENT_VERSION-$id
+    if [ ! -f $queue_file ]; then
+	echo "NOTE: No queue file found"
+	return
+    fi
     local found_next=0
     # FIXME: Test this, looks like I changed it to non-subshell but am still using exit.
     while read -r x; do
@@ -306,12 +327,12 @@ function queue_next_version {
 	0.[0-9]*)
 	    found_next=1
 	    echo "Queueing up $x"
-	    echo $x > runstate/CURRENT_VERSION-$id
-	    sed -i '/^'$x'$/d' runstate/queue-$id  # NOTE: GNU sed specific
+	    echo $x > $queue_file
+	    sed -i '/^'$x'$/d' $queue_file # NOTE: GNU sed specific
 	    exit 0
 	    ;;
 	esac
-    done < runstate/queue-$id
+    done < $queue_file
     if [ $found_next -eq 0 ]; then
 	echo "No queued version found. Stopping queue."
 	rm runstate/CURRENT_VERSION-$id
@@ -323,9 +344,17 @@ function get_gamelog_name {
     local cc=$2
     local ver=$3
     local once=$4
+    local opt_id=$5
 
-    local base="benchresult/$(get_system_idname)/$game-$(get_system_idname)-$ver-$cc.result"
+    if [ ! -z $opt_id ]; then
+	opt_id="-${opt_id}"
+    fi
+    local base="benchresult/$(get_system_idname)/$game-$(get_system_idname)-$ver-$cc$opt_id.result"
     local i=1
+    if [ $once -ne 1 ]; then
+	# FIXME: seed random from PID? (RANDOM=$$)
+	i=$RANDOM # Try to avoid TOCTOU problems on cluster
+    fi
     local log=$base.$i
     if [ -f $log ]; then
 	if [ $once -eq 1 ]; then
@@ -373,6 +402,9 @@ function write_benchmark_header {
     local log=$1
 
     echo "CC: $CC" >> $log
+    echo "OPTIMIZE: $COMP_OPTIMIZE" >> $log
+    echo "ARCHOPTS: $COMP_ARCHOPTS" >> $log
+    echo "Optimization ID: $OPT_ID" >> $log
     echo "Mame: $VER" >> $log
     echo "Node: $(uname -n)" >> $log
     echo "System: $(get_system_idname)" >> $log
@@ -388,4 +420,14 @@ function check_timeout {
     if [ $rcode -eq 124 ]; then
 	echo "Timed out after ${TIMEOUT_WAIT}s"
     fi
+}
+
+function get_optimization_id {
+    local id=""
+    local default_opt=3 # FIXME: Verify that 0 is default
+    if [ ! -z "$COMP_OPTIMIZE" -a x"$COMP_OPTIMIZE" != x$default_opt ]; then
+	id="O$COMP_OPTIMIZE"
+    fi
+    id="$id$COMP_ARCHOPTS"
+    echo $id | sed 's/[ =\-]//g'
 }
