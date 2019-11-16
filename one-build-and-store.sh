@@ -10,6 +10,9 @@ source ${ZTOOLDIR}/functions.sh
 source ${ZTOOLDIR}/config.sh
 CC=$COMP_CC
 CXX=$COMP_CXX
+OPT_ID=$(get_optimization_id)
+GENIE_OPTIMIZE="OPTIMIZE=$COMP_OPTIMIZE"
+GENIE_ARCHOPTS="" # FIXME: verify quoting
 
 # Bail if CWD isn't a mame git checkout
 verify_mame_checkout
@@ -26,10 +29,12 @@ fi
 
 CCNAME=$(echo $CC | sed 's/\-//')
 HASH=$(git rev-parse --short HEAD)
-# GITNAME=$(git describe --dirty)
 GITNAME=$(git describe --tags)
 
 STORENAME=$GITNAME-$CCNAME-$HASH
+if [ ! -z $OPT_ID ]; then
+    STORENAME=$STORENAME-$OPT_ID
+fi
 STOREDIR=../stored-mames
 VERSION=$(echo $GITNAME | sed 's/mame0\([0-9]*\).*/\1/')
 
@@ -131,14 +136,17 @@ fi
 
 echo "Reinit log" > $STORENAME.log
 failed=0
-GENIE_ARGS="TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX)"
+GENIE_ARGS="TOOLS=1 DEPRECATED=0 NOWERROR=1 OVERRIDE_CC=$(which $CC) OVERRIDE_CXX=$(which $CXX) $GENIE_OPTIMIZE"
+
+echo $GENIE_ARGS
+echo $COMP_ARCHOPTS
 
 # NOTE: tags older than mame0162 has a separate "mess" target
 # NOTE: tags older than mame0147 has mess in a separate mess repo
 # TODO: build mess from separate repo
 if [ $VERSION -lt 162 -a $VERSION -gt 146 ]; then
     echo "mess build starting on $(date)" >> $STORENAME.log
-    (time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 $GENIE_ARGS TARGET=mess >>$STORENAME.log 2>&1 ||
+    (time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 $GENIE_ARGS ARCHOPTS="$COMP_ARCHOPTS" TARGET=mess >>$STORENAME.log 2>&1 ||
 	 time make -j1 $GENIE_ARGS TARGET=mess >>$STORENAME.log 2>&1) \
 	     || failed="mess"
 fi
@@ -146,7 +154,7 @@ fi
 if [ $failed = 0 ]; then
     mkdir -p $STOREDIR
     echo "mame build starting on $(date)" >> $STORENAME.log
-    time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 $GENIE_ARGS >>$STORENAME.log 2>&1 ||
+    time make -k -j$(grep -c '^processor' /proc/cpuinfo) REGENIE=1 $GENIE_ARGS ARCHOPTS="$COMP_ARCHOPTS" >>$STORENAME.log 2>&1 ||
 	time make -j1 $GENIE_ARGS >>$STORENAME.log 2>&1 &&
 	fake_missing_files &&
 	make -f dist.mak PTR64=$PTR64 >>$STORENAME.log 2>&1 &&
