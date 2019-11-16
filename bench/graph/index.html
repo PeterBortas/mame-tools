@@ -6,9 +6,9 @@
 <body>
 <h1>Mame™ Raspberry Pi 4 benchmarks</h1>
 
-These benchmarks is still in the process of being collected. The
-current batch is run with the default gcc8 flags, no attempt has been
-made to exploit the newer instructions available on RPi4 yet.
+The current batch of benchmarks is run with the default gcc8 flags, no
+attempt has been made to exploit the newer instructions available on
+RPi4 yet.
 <p>
 The main target of these benchmarks right now is to track performance
 over time in Mame version. I'm not mad enough to run Mame on a
@@ -25,7 +25,7 @@ in <a href="http://www.mameui.info/Bench.htm">john_iv's continuously
 updated benchmark</a> run on modern PCs have also been included in
 this benchmark, but a few games are so slow that they are unfeasible
 to run on the current generation of RPi.
-  
+
 <h2>Benchmarking environment</h2>
 <ul>
   <li>Raspberry Pi 4 rev 1, 2G RAM variant
@@ -61,6 +61,14 @@ use_marquees  0</pre>
 <ul>
   <li><a href="rpi4_1.75-gcc8-bench.html">Raspberry Pi 4 1.75GHz OC (-bench 90 runs)</a> These runs the builtin benchmark, which does not try to output video or audio
   <li><a href="rpi4_1.75-gcc8-real.html">Raspberry Pi 4 1.75GHz OC (-str 90 -nothrottle runs)</a> These runs Mame as normal, with video and audio and are closer to what can be expected when playiung the game
+</ul>
+
+<h2>Preliminary Intel benchmarks</h2>
+<ul>
+<li><a href="cc-compare-xeon_e5_2660.html">Per game comparisons of compiler options</a>
+<li><a href="xeon_e5_2660-gcc8-bench.html">gcc8 -O3 (default)</a> All games in the same graph for one optimization type, select the ones you want
+<li><a href="xeon_e5_2660-gcc8-O4marchnativefomitframepointer-bench.html">gcc8 -O4 -march=native -fomit-frame-pointer</a> All games in the same graph for one optimization type, select the ones you want
+<li><a href="xeon_e5_2660-gcc8-Osbench.html">gcc8 -Os</a> All games in the same graph for one optimization type, select the ones you want
 </ul>
 
 </body>

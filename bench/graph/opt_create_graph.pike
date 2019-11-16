@@ -1,6 +1,7 @@
 #!/usr/bin/env pike
 
 #define USE_SCREENSHOTS 0
+#define VERBOSE 0
 
 mapping runspecifics = ([]);
 void verify_runspecific(string name, string|int value)
@@ -10,7 +11,8 @@ void verify_runspecific(string name, string|int value)
 
     // Allow for some very similar systems to pollute the pool
     if(value == "ProLiant SL230s G8") {
-	// werror("NOTE: upcasting systemtype\n");
+	if(VERBOSE > 1)
+	    werror("NOTE: upcasting systemtype\n");
 	value = "ProLiant SL250s G8";
     }
 
@@ -20,7 +22,8 @@ void verify_runspecific(string name, string|int value)
 	if(runspecifics[name] != value) {
 	    if(name == "systemram" && (int)value > 24) {
 		// Allow RAM missmatches as long as there is enough of it
-		// werror("WARNING: %s missmatch, %O != %O\n", name, value, runspecifics[name]);
+		if(VERBOSE > 1)
+		    werror("WARNING: %s missmatch, %O != %O\n", name, value, runspecifics[name]);
 	    } else {
 		exit(1, "FATAL: %s missmatch, %O != %O\n",
 		     name, value, runspecifics[name]);
@@ -58,13 +61,14 @@ mapping parse_result(string filename, string opt_id)
     mapping res = ([]);
     string current_test_type;
     foreach(resultlines; int lnr; string line) {
-	// werror("line: '%s'\n", line);
+	if(VERBOSE > 2)
+	    werror("line: '%s'\n", line);
 	switch(lnr) {
 	case 0:
 	    if(sscanf(line, "Name:%*[ ]Description:") != 1) {
 		werror("WARNING: Failed to parse line %d '%s' in \n%s\n",
 		       lnr, line, filename);
-		return res;
+		return 0;
 	    }
 	    break;
 	case 1:
@@ -72,7 +76,7 @@ mapping parse_result(string filename, string opt_id)
 	    if(matches != 3) {
 		werror("WARNING: Failed to parse line %d '%s' in \n%s\n",
 		       lnr, line, filename);
-		return res;
+		return 0;
 	    }
 	    break;
 	default:
@@ -133,32 +137,20 @@ mapping parse_result(string filename, string opt_id)
 	    if(sscanf(line, "Optimization ID: %s", string _opt_id) == 1) {
 		if(_opt_id == "") // Default -O3
 		    _opt_id = 0;
-		if(_opt_id != opt_id)
-		    return 0;
-		// OPTIMIZE and ARCHOPTS are defined before this in
-		// the result file, so we can pick them out if existing
-		string opt="", archopts="";
-		if(res->optimize && sizeof(res->optimize))
-		    opt = "-O"+res->optimize;
-		if(res->archopts)
-		    archopts = res->archopts;
-
-		string calc_id = replace(opt+archopts, 
-					 ({"-", " ", "=" }), ({"", "", ""}));
-		if(calc_id == "")
-		    calc_id = 0;
-		if(calc_id == opt_id)
-		    if(opt_id)
-			verify_runspecific("ccoptions", opt +" "+ archopts);
-		    else
-			verify_runspecific("ccoptions", "");
-		else // TODO: This should be a failure, but legacy results
-		    werror("WARNING: %O != %O\n", calc_id, opt_id);
-
+		
+		res->opt_id = _opt_id;
 		verify_runspecific("opt_id", opt_id);
 	    }
 	    if(sscanf(line, "Mame: %s", string version) == 1) {
 		res->mameversion = version;
+		// FIXME: hardcoded to skip older than 0.202
+		// comparison happens to work becuase no results are <0.100
+		if( (float)version < 0.202 ) {
+		    if(VERBOSE > 1)
+			werror("skipping: %O %O %O\n", 
+			       version, (float)version, res->game);
+		    return 0;
+		}
 	    }
 	    if(sscanf(line, "System: %s", string id) == 1) {
 		verify_runspecific("systemid", id);
@@ -189,11 +181,6 @@ mapping parse_result(string filename, string opt_id)
 	res->throttled_before="0x0";
     if(!res->throttled_after)
 	res->throttled_after="0x0";
-
-    // FIXME: Verify that res has the needed content so the rest of
-    // the code doen't have too. Many files will be half finished if
-    // read while benchmarks are ongoing.
-
     return res;
 }
 
@@ -411,7 +398,6 @@ string create_chart(mapping all_results, string type)
 			stats->good += 1;
 			vbenches += ({ (["v":percent/100]) });
 		    }
-		    
 		}
 	    } else {
 		// There is no entry of this game for this version
@@ -419,8 +405,7 @@ string create_chart(mapping all_results, string type)
 		vbenches += ({ (["v":"null" ]) });
 	    }
 	    // tooltip that will be shown when hovering over a datapoint
-	    if( intp(version) || intp(game) )
-		werror("tooltop: %O, %O\n", version, game);
+	    //	    werror("%O %O\n", version, game);
 	    string tooltip = sprintf("%s <b>%s</b><br>\n", version, game);
 	    if(!stats->games[game])
 		stats->games[game]=([]);
@@ -494,6 +479,9 @@ string create_chart(mapping all_results, string type)
 mapping(string:string) drivercache = ([]);
 string get_driver(string game)
 {
+    // FIXME: Part of the optimization alts hack
+    game = (game/" ")[0];
+
     if(drivercache[game])
 	return drivercache[game];
     
@@ -543,26 +531,24 @@ string get_driver(string game)
 
 int main(int argc, array argv)
 {
-    if(argc < 3) {
-	exit(1, "Usage: create_graph.pike <gamelist file> <system shortname> [opt_id]\n"
+    if(argc != 3) {
+	exit(1, "Usage: opt_create_graph.pike <game name> <system shortname>\n"
 	     "Examples:\n"
-	     "    ./create_graph.pike ../games.lst rpi4_1.75\n"
-	     "    ./create_graph.pike ../games.lst xeon_x5570\n"
-	     "    ./create_graph.pike ../games.lst xeon_e5_2660 Os\n");
+	     "    ./create_graph.pike tekken rpi4_1.75\n"
+	     "    ./create_graph.pike starwars xeon_x5570\n"
+	     "    ./create_graph.pike 1943 xeon_e5_2660\n");
     }
     // TODO: Use the argument parser
-    string listfile = argv[1];
+    string listfile = argv[1]; //FIXME: This is the game name for this hack
     string shortname = argv[2];
-    string opt_id;
-    if(argc > 3)
-	opt_id = argv[3];
+    string opt_id = listfile; // FIXME: Just used for benchmark filename in this hack
     string result_base = "../benchresult/"+ shortname +"/";
 
+    werror("Processing %O\n", listfile);
+
     array result_files = get_dir(result_base);
-    if(opt_id) // Optimization, end result will be the same
-	result_files = glob("*-"+opt_id+".result*", result_files);
     mapping all_results = ([]);
-    object games = Stdio.File(listfile)->line_iterator();
+    array games = ({ listfile }); // TODO: More than one game per graph?
     foreach(games; int lnr; string game) {
 	if(game[0..0] == "#")
 	    continue; // Skip comments
@@ -572,9 +558,7 @@ int main(int argc, array argv)
 	foreach( glob(game+"-*", result_files), string resultfile ) {
 	    string filename = result_base + resultfile;
 	    mapping result = parse_result(filename, opt_id);
-
-	    // The opt_id didn't match or the file is damaged in some way
-	    if(!result) 
+	    if(!result) // The opt_id didn't match or we purposly avoid version
 		continue;
 
 	    // werror("result: %O\n", result);
@@ -582,6 +566,13 @@ int main(int argc, array argv)
 	    string ver = result->mameversion;
 	    if(! all_results[ver])
 		all_results[ver] = ([]);
+
+	    // FIXME: quick hack where diffrent compiler options gets
+	    // added as diffrent games
+	    if(result->opt_id)
+		game = game +" "+ result->opt_id;
+	    else
+		game = game +" O3";
 
 	    // If there is more than one test of the same game/version, average them
 	    //FIXME: This ignores every parameter except the speed value
@@ -608,6 +599,9 @@ int main(int argc, array argv)
 		all_results[ver][game] = result;
 	    }
 	    //werror("all_results[%s][%s]: %O\n", ver, game, all_results[ver][game]);
+	    // FIXME: quick hack where diffrent compiler options gets
+	    // added as diffrent games
+	    game = (game/" ")[0];
 	}
     }
 
@@ -620,8 +614,10 @@ int main(int argc, array argv)
 	// important
 	string chart_data = create_chart(all_results, type);
 	string table_data = create_table(all_results, type);
-	// werror("DEBUG table_data:\n%s\n", table_data);
-	// werror("DEBUG chart_data:\n%s\n", chart_data);
+	if(VERBOSE > 1) {
+	   werror("DEBUG table_data:\n%s\n", table_data);
+	   werror("DEBUG chart_data:\n%s\n", chart_data);
+	}
 
 	string flags;
 	switch(type) {
@@ -635,7 +631,8 @@ int main(int argc, array argv)
 	    exit(1, "FATAL: Unknown benchmark type %O", type);
 	}
 
-	werror("runspecifics: %O\n", runspecifics);
+
+	// werror("runspecifics: %O\n", runspecifics);
 
 	string cpus = "";
 	if(runspecifics->sockets > 1)
@@ -660,8 +657,9 @@ int main(int argc, array argv)
 	
 	string template = Stdio.read_file("chart-template.js");
 	string out = replace( template,
-			      ({ "¤TABLEDATA¤", "¤CHARTDATA¤", "¤SYSTEMDESC¤" }),
-			      ({ table_data,    chart_data,    system_desc    }) );
+	      ({ "¤TABLEDATA¤", "¤CHARTDATA¤", "¤SYSTEMDESC¤", "optgraph = 0"}),
+	      ({ table_data,    chart_data,    system_desc,    "optgraph = 1"})
+			      );
 	string compilerid = runspecifics->compiler;
 	if(runspecifics->opt_id)
 	    compilerid += "-"+opt_id;
@@ -678,6 +676,8 @@ int main(int argc, array argv)
 		       ({ flags,         benchid,     system_desc,    compiler_desc,    system_extra_desc }) );
 	Stdio.write_file("output/"+benchid+".html", out);	
     }
-    stats->games = "removed (too verbose)";
-    werror("stats: %O\n", stats);
+    if(VERBOSE) {
+      // stats->games = "removed (too verbose)";
+      werror("stats: %O\n", stats);
+    }
 }

@@ -64,6 +64,14 @@ function drawCharts() {
 	tooltip: { isHtml: true }, //FIXME: tooptips need better colours
     };
     
+    var optgraph = 0; // Used to hardcode opt graphs with replace
+    if(optgraph) {
+	coptions.annotations = {
+	    textStyle: { opacity: 1.0 }
+	}
+	console.log("force-enabling annotation:", toptions);
+    }
+
     var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
     chart.draw(cdata, coptions);
 
@@ -110,7 +118,7 @@ function drawCharts() {
 		
 		// If only two games are selected, add trendlines
 		var trendoptions = Object.assign({}, coptions);
-		if(sel.length<3) {
+		if(!optgraph && sel.length<3) {
 		    trendoptions.trendlines = {
 			0: {
 	 		    type: 'polynomial',
@@ -122,7 +130,7 @@ function drawCharts() {
 		}
 
 		// If only a few games are selected, add show the annotations
-		if(sel.length<8) {
+		if(optgraph || sel.length<8) {
 		    trendoptions.annotations = {
 			textStyle: { opacity: 1.0 }
 		    }
