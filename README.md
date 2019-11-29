@@ -89,7 +89,7 @@ will resume, but all games on the list will be re-benchmarked.
 Producing a HTML report from a selection of benchmarks
 ======================================================
 
-Requirement: Pike 7.8+
+Requirement: Pike 8.0+
 
 ```
 cd /mametest/mame-tools/bench/graph

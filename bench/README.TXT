@@ -16,7 +16,7 @@ cubeqst:
 
 gradius4:
 ---------
-* Needs it's time set up. F2 to enter setup, arraw keys and "1" to do
+* Needs it's time set up. F2 to enter setup, arrow keys and "1" to do
   input. Initial environment supplied.
 * Crashed Mame when testing checksums from the setup menu.
 
