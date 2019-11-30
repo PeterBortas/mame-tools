@@ -1,0 +1,13 @@
+diff --git a/src/osd/sdl/sdl.mak b/src/osd/sdl/sdl.mak
+index fa163bd..42653d9 100644
+--- a/src/osd/sdl/sdl.mak
++++ b/src/osd/sdl/sdl.mak
+@@ -539,7 +539,7 @@ endif
+ 
+ # libs that Haiku doesn't want but are mandatory on *IX
+ ifneq ($(TARGETOS),haiku)
+-LIBS += -lm -lutil
++LIBS += -lm -lutil -lpthread
+ endif
+ 
+ endif # not Mac OS X
