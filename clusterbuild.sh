@@ -46,8 +46,9 @@ if [ ! -d $SHM_BASE/mame ]; then
 fi
 cd $SHM_BASE/mame
 
-source /home/zino/mame-stuff/mame-tools/analysator-env.sh
-time /home/$USER/mame-stuff/mame-tools/build-all-tags.sh $TAG
+source $HOME/mame-stuff/mame-tools/config.sh # Get GCC version
+source $HOME/mame-stuff/mame-tools/analysator-env.sh
+time $HOME/mame-stuff/mame-tools/build-all-tags.sh $TAG
 
 # Comment this out to avoid unpacking the source each run
 rm -rf $SHM_BASE/mame

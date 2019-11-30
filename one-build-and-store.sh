@@ -11,8 +11,9 @@ source ${ZTOOLDIR}/config.sh
 CC=$COMP_CC
 CXX=$COMP_CXX
 OPT_ID=$(get_optimization_id)
-GENIE_OPTIMIZE="OPTIMIZE=$COMP_OPTIMIZE"
-GENIE_ARCHOPTS="" # FIXME: verify quoting
+if [ ! -z $COMP_OPTIMIZE ]; then
+    GENIE_OPTIMIZE="OPTIMIZE=$COMP_OPTIMIZE"
+fi
 
 # Bail if CWD isn't a mame git checkout
 verify_mame_checkout

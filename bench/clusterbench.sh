@@ -25,7 +25,10 @@ if [ -z $VER ]; then
     exit 1
 fi
 
-# Easybuilds stupid GCC requires LD_LIBRARY_PATH set for everything it
-# builds
-module load GCC/8.2.0-2.31.1 
+# Most things built with non-system compiler needs LD_LIBRARY_PATH set
+# for the C++ runtime. RPATH would be nice, but is seldome set up
+# correctly.
+source $HOME/mame-stuff/mame-tools/config.sh # Get GCC version
+source $HOME/mame-stuff/mame-tools/analysator-env.sh
+
 ./resumable_benchmark.sh $VER --force

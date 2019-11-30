@@ -1,7 +1,8 @@
 #!/usr/bin/env pike
 
-#define USE_SCREENSHOTS 0
+#define USE_SCREENSHOTS 0  // Show screenshots in the mouse-over annotation
 #define VERBOSE 0
+#define MIN_RAM_CLUSTER 24 // If note RAM differs, require at least this much
 
 mapping runspecifics = ([]);
 void verify_runspecific(string name, string|int value)
@@ -20,10 +21,10 @@ void verify_runspecific(string name, string|int value)
 	runspecifics[name] = value;
     } else {
 	if(runspecifics[name] != value) {
-	    if(name == "systemram" && (int)value > 24) {
-		// Allow RAM missmatches as long as there is enough of it
+	    if(name == "systemram" && (int)value > MIN_RAM_CLUSTER) {
 		if(VERBOSE > 1)
-		    werror("WARNING: %s missmatch, %O != %O\n", name, value, runspecifics[name]);
+		    werror("WARNING: %s missmatch, %O != %O\n",
+			   name, value, runspecifics[name]);
 	    } else {
 		exit(1, "FATAL: %s missmatch, %O != %O\n",
 		     name, value, runspecifics[name]);
@@ -32,27 +33,6 @@ void verify_runspecific(string name, string|int value)
     }
 }
 
-//FIXME: Get all details from the files
-// Still in use:
-//    res->mameversion
-mapping parse_filename(string filename)
-{
-    mapping res = ([]);
-    filename = basename(filename);
-
-    //example: 1943-xeon_x5570-0.212-gcc5-O2.result.1
-    if(sscanf(filename, "%s-%s-0.%d-%s-%s.result.%d",
-	      res->game, res->shortname, res->mameversion, res->compiler, res->opt_id, res->runnr) == 6) {
-	return res;
-    }
-    //example: 1943-xeon_x5570-0.212-gcc5.result.1
-    if(sscanf(filename, "%s-%s-0.%d-%s.result.%d",
-	      res->game, res->shortname, res->mameversion, res->compiler, res->runnr) == 5) {
-	return res;
-    }
-
-    exit(1, "FATAL: Unable to parse filename '%s'\n", filename);
-}
 
 mapping test_types = ([]); // Keep track of which types have been seen
 mapping parse_result(string filename, string opt_id)
@@ -126,6 +106,7 @@ mapping parse_result(string filename, string opt_id)
 		res[current_test_type]->failtype = "missing files";
 	    }
 	    if(sscanf(line, "CC: %s", string compiler) == 1) {
+		// FIXME: Add multiple compiler support
 		verify_runspecific("compiler", compiler);
 	    }
 	    if(sscanf(line, "OPTIMIZE: %s", string optimize) == 1) {
@@ -170,7 +151,7 @@ mapping parse_result(string filename, string opt_id)
     // FIXME: Only needed for earlier files that did no record compiler and mame version
     // Remove this
     if(!res->mameversion) {
-	mapping fileinfo = parse_filename(filename);
+	mapping fileinfo = .MameBench.parse_filename(filename);
 	res->mameversion = "0."+ fileinfo->mameversion;
 	if(!res->compiler)
 	    res->compiler = fileinfo->compiler;

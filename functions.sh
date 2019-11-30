@@ -1,5 +1,6 @@
 # Requires bash, will not work with sh
 
+# TODO: Change loadorder in the scripts so MAMEBASE can be moved to config.sh
 MAMEBASE="$HOME/mame-stuff"
 shopt -s extglob  # Extended globing needed for the mame binary locator
 

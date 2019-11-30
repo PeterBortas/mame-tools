@@ -11,7 +11,7 @@ mkdir -p output
 
 for opts in "" Os O4marchnativefomitframepointer; do
     echo "Creatin combined graph for $arch $opts"
-    ./create_graph.pike ../games-all.lst $arch $opts
+#    ./create_graph.pike ../games-all.lst $arch $opts
 done
 
 # make a separate graph page for each game comparing diffrent compiler
