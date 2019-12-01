@@ -1,0 +1,10 @@
+# Games that take more thatn 15min to run the 90s benchmark
+# FIXME: Automatically apply this in the rpi benchmark script
+blitz
+cyvern
+gnbarich
+gradius4
+scud
+sfiii
+vfkids
+

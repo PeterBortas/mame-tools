@@ -5,7 +5,7 @@ set -e
 # FIXME: needlessly hardcoded in general
 
 arch=xeon_e5_2660
-gamelist=../games-minimal.lst
+gamelist=../games.lst
 mkdir -p output
 
 # make a graph page combining all games for each optimization type
