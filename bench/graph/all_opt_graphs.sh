@@ -5,13 +5,14 @@ set -e
 # FIXME: needlessly hardcoded in general
 
 arch=xeon_e5_2660
+gamelist=../games-minimal.lst
 mkdir -p output
 
 # make a graph page combining all games for each optimization type
 
 for opts in "" Os O4marchnativefomitframepointer; do
-    echo "Creatin combined graph for $arch $opts"
-#    ./create_graph.pike ../games-all.lst $arch $opts
+    echo "Creating combined graph for $arch $opts"
+    ./create_graph.pike $gamelist $arch $opts
 done
 
 # make a separate graph page for each game comparing diffrent compiler
@@ -35,6 +36,6 @@ while read -r game; do
     link=${arch}-gcc8-${game}-bench.html
     ./opt_create_graph.pike $game $arch &&
         echo "<li><a href=$link>$game</a>" >> $indexpage
-done < ../games-all.lst
+done < $gamelist
 
 echo "</ul>" >> $indexpage
