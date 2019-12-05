@@ -106,6 +106,10 @@ mapping parse_result(string filename, string opt_id)
 	    }
 	    if(sscanf(line, "CC: %s", string compiler) == 1) {
 		// FIXME: Add multiple compiler support
+		if(compiler != HARDCODED_GCC) {
+		    // werror("FIXME: Skipping non-%s result\n", HARDCODED_GCC);
+		    return 0;
+		}
 		verify_runspecific("compiler", compiler);
 	    }
 	    if(sscanf(line, "OPTIMIZE: %s", string optimize) == 1) {
@@ -146,7 +150,7 @@ mapping parse_result(string filename, string opt_id)
 		    else // TODO: This should be a failure, but legacy results
 			werror("WARNING: %O != %O\n", calc_id, opt_id);
 		    
-		    verify_runspecific("opt_id", opt_id);		
+		    verify_runspecific("opt_id", opt_id);
 		}
 	    }
 	    if(sscanf(line, "Mame: %s", string version) == 1) {

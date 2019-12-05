@@ -7,8 +7,8 @@ COMP_CXX=g++-$GCCVER
 #COMP_OPTIMIZE=4
 #COMP_ARCHOPTS="-march=native -fomit-frame-pointer"
 
-#COMP_OPTIMIZE=s
-#COMP_ARCHOPTS="-march=native -fomit-frame-pointer"
+COMP_OPTIMIZE=s
+COMP_ARCHOPTS="-march=native -fomit-frame-pointer"
 
 # <cuavas> I usually set ARCHOPTS=-msse4.2 -fomit-frame-pointer
 # <cuavas> (for personal builds, I don't set it for release)

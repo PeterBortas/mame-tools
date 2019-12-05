@@ -5,11 +5,14 @@ set -e
 # FIXME: needlessly hardcoded in general
 
 arch=xeon_e5_2660
-gamelist=../games.lst
+gamelist=../games-all.lst
 mkdir -p output
 
-# make a graph page combining all games for each optimization type
+MYDIR=$(dirname $0)
+source ${MYDIR}/../../config.sh
+source ${MYDIR}/../../analysator-env.sh # all this to be able to run mame to get driver names
 
+# make a graph page combining all games for each optimization type
 for opts in "" Os O4marchnativefomitframepointer; do
     echo "Creating combined graph for $arch $opts"
     ./create_graph.pike $gamelist $arch $opts
